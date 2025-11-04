@@ -1,0 +1,38 @@
+{
+  "name": "live-olympic-hockey-draft",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "build": "vite build",
+    "serve": "vite preview",
+    "test": "vitest run",
+    "start": "node .output/server/index.mjs"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.1.1",
+    "@kobalte/core": "^0.13.11",
+    "@netlify/vite-plugin-tanstack-start": "^1.0.2",
+    "@tailwindcss/vite": "^4.0.6",
+    "@tanstack/router-plugin": "^1.133.21",
+    "@tanstack/solid-router": "^1.133.20",
+    "@tanstack/solid-router-devtools": "^1.133.20",
+    "@tanstack/solid-start": "^1.132.25",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "convex": "^1.27.3",
+    "convex-solidjs": "^0.0.3",
+    "lucide-solid": "^0.544.0",
+    "solid-js": "^1.9.9",
+    "tailwind-merge": "^3.0.2",
+    "tailwindcss": "^4.0.6",
+    "tailwindcss-animate": "^1.0.7",
+    "vite": "^7.1.7",
+    "vite-tsconfig-paths": "^5.1.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^7.1.7",
+    "vite-plugin-solid": "^2.11.10"
+  }
+}

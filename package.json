@@ -4,12 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
+    "dev:convex": "convex dev",
     "build": "vite build",
     "serve": "vite preview",
     "test": "vitest run",
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
+    "@convex-dev/better-auth": "^0.9.7",
     "@fontsource/inter": "^5.1.1",
     "@kobalte/core": "^0.13.11",
     "@netlify/vite-plugin-tanstack-start": "^1.0.2",
@@ -18,9 +20,10 @@
     "@tanstack/solid-router": "^1.133.20",
     "@tanstack/solid-router-devtools": "^1.133.20",
     "@tanstack/solid-start": "^1.132.25",
+    "better-auth": "1.3.27",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "convex": "^1.27.3",
+    "convex": "^1.28.2",
     "convex-solidjs": "^0.0.3",
     "solid-js": "^1.9.9",
     "tailwind-merge": "^3.0.2",

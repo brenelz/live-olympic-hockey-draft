@@ -17,8 +17,8 @@ export const Route = createRootRouteWithContext()({
     links: [{ rel: "stylesheet", href: styleCss }],
   }),
   beforeLoad: async () => {
-    const { userId, token } = await fetchAuth();
-    return { userId, token };
+    const { session, token } = await fetchAuth();
+    return { session, token };
   },
   shellComponent: RootComponent,
 });

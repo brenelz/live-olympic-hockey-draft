@@ -2,14 +2,8 @@ import { createFileRoute, useRouter } from "@tanstack/solid-router";
 import { createSignal, Show } from "solid-js";
 import { authClient } from "~/lib/auth-client";
 import { Button } from "~/components/ui/button";
-import { fetchAuth } from "~/lib/auth";
 
 export const Route = createFileRoute("/")({
-  loader: async () => {
-    return {
-      auth: await fetchAuth(),
-    };
-  },
   component: App,
 });
 
@@ -20,7 +14,7 @@ function App() {
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
   const [isSignUp, setIsSignUp] = createSignal(false);
-  const router = useRouter();
+  const session = authClient.useSession();
 
   const handleAuth = async (e: Event) => {
     e.preventDefault();
@@ -43,14 +37,12 @@ function App() {
     } catch (err: any) {
       setError(err.message || "Authentication failed");
     } finally {
-      router.invalidate();
       setIsLoading(false);
     }
   };
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    router.invalidate();
   };
 
   return (
@@ -62,7 +54,7 @@ function App() {
           </h1>
 
           <Show
-            when={loaderData()?.auth.session?.user.id}
+            when={session().data?.session}
             fallback={
               <div>
                 <form onSubmit={handleAuth} class="space-y-4">
@@ -130,7 +122,7 @@ function App() {
             }
           >
             <div class="text-center space-y-4">
-              <p class="text-lg text-slate-700">Welcome, {loaderData()?.auth.session?.user.name}!</p>
+              <p class="text-lg text-slate-700">Welcome, {session().data?.user?.name}!</p>
               <Button onClick={handleSignOut} variant="outline" class="w-full">
                 Sign Out
               </Button>

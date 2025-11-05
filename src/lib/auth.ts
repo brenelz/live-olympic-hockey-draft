@@ -11,9 +11,8 @@ export const fetchAuth = createServerFn({ method: "GET" }).handler(async () => {
   const { session } = await fetchSession(getRequest());
   const sessionCookieName = getCookieName(createAuth);
   const token = getCookie(sessionCookieName);
-  console.log({ session });
   return {
-    userId: session?.user.id,
+    session,
     token,
   };
 });

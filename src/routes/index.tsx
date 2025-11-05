@@ -62,7 +62,7 @@ function App() {
           </h1>
 
           <Show
-            when={loaderData()?.auth.token}
+            when={loaderData()?.auth.session?.user.id}
             fallback={
               <div>
                 <form onSubmit={handleAuth} class="space-y-4">
@@ -112,8 +112,8 @@ function App() {
                     {isLoading()
                       ? "Loading..."
                       : isSignUp()
-                      ? "Sign Up"
-                      : "Sign In"}
+                        ? "Sign Up"
+                        : "Sign In"}
                   </Button>
 
                   <button
@@ -130,7 +130,7 @@ function App() {
             }
           >
             <div class="text-center space-y-4">
-              <p class="text-lg text-slate-700">Welcome, !</p>
+              <p class="text-lg text-slate-700">Welcome, {loaderData()?.auth.session?.user.name}!</p>
               <Button onClick={handleSignOut} variant="outline" class="w-full">
                 Sign Out
               </Button>

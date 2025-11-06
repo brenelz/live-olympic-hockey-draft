@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/solid-router";
-import { For, createSignal, Show, onMount, onCleanup } from "solid-js";
+import { For, createSignal, Show, onMount, onCleanup, createMemo, createEffect } from "solid-js";
 import { useQuery, useMutation } from "convex-solidjs";
 import { api } from "../../../../../convex/_generated/api";
 import { authClient } from "~/lib/auth-client";
@@ -24,9 +24,12 @@ function PreDraft() {
   // Fetch draft data
   const { data: draft } = useQuery(api.drafts.getDraftById, { draftId });
   const { data: teams } = useQuery(api.drafts.getDraftTeams, { draftId });
+  const { data: onlineUsers } = useQuery(api.drafts.getOnlineUsers, { draftId });
 
   // Start draft mutation
   const { mutate: startDraft } = useMutation(api.drafts.startDraft);
+  const { mutate: updatePresence } = useMutation(api.drafts.updatePresence);
+  const { mutate: removePresence } = useMutation(api.drafts.removePresence);
 
   // Check if current user is host
   const isHost = () => {
@@ -48,7 +51,23 @@ function PreDraft() {
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
 
-    onCleanup(() => clearInterval(interval));
+    // Update presence heartbeat every 10 seconds
+    const updatePresenceHeartbeat = () => {
+      updatePresence({ draftId });
+    };
+
+    // Update immediately and then every 10 seconds
+    updatePresenceHeartbeat();
+    const presenceInterval = setInterval(updatePresenceHeartbeat, 10000);
+
+    onCleanup(() => {
+      clearInterval(interval);
+      clearInterval(presenceInterval);
+      // Remove presence when component unmounts (user navigates away)
+      removePresence({ draftId }).catch(() => {
+        // Ignore errors - user might have already been removed
+      });
+    });
   });
 
   const formatTimeRemaining = (ms: number) => {
@@ -213,6 +232,10 @@ function PreDraft() {
                 <For each={teams?.() || []}>
                   {(team) => {
                     const isCurrentUser = () => currentUserId() === team.betterAuthUserId;
+                    const isOnline = createMemo(() => {
+                      const online = onlineUsers?.();
+                      return online ? online.includes(team.betterAuthUserId) : false;
+                    });
                     return (
                       <div
                         class={`flex items-center justify-between p-4 rounded-lg border ${"bg-slate-900/50 border-slate-600"
@@ -235,12 +258,21 @@ function PreDraft() {
                           </div>
                         </div>
                         <div class="flex items-center gap-3">
-                          {/* Logged in indicator - simplified for now */}
-                          <div class="flex items-center gap-1">
-                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span class="text-green-400 text-xs">Online</span>
-                          </div>
-                          <span class="text-green-400 text-sm">✓ Joined</span>
+                          {/* Online indicator */}
+                          <Show
+                            when={isOnline()}
+                            fallback={
+                              <div class="flex items-center gap-1">
+                                <div class="w-2 h-2 bg-slate-500 rounded-full"></div>
+                                <span class="text-slate-400 text-xs">Offline</span>
+                              </div>
+                            }
+                          >
+                            <div class="flex items-center gap-1">
+                              <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span class="text-green-400 text-xs">Online</span>
+                            </div>
+                          </Show>
                         </div>
                       </div>
                     );

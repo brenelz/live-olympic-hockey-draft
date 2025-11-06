@@ -36,4 +36,11 @@ export default defineSchema({
     })
         .index("draftTeamId", ["draftTeamId"])
         .index("draftablePlayerId", ["draftablePlayerId"]),
+
+    draftPresence: defineTable({
+        draftId: v.id("drafts"),
+        betterAuthUserId: v.string(),
+        lastSeen: v.number(),
+    })
+        .index("draftId", ["draftId"]),
 });

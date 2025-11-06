@@ -16,6 +16,7 @@ export const createAuth = (
   { optionsOnly } = { optionsOnly: false }
 ) => {
   return betterAuth({
+    trustedOrigins: ['https://live-olympic-hockey-draft.netlify.app'],
     // disable logging when createAuth is called just to generate options.
     // this is not required, but there's a lot of noise in logs without it.
     logger: {

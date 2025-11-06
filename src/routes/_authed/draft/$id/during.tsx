@@ -23,6 +23,7 @@ function DuringDraft() {
   const { data: currentPickData } = useQuery(api.drafts.getCurrentPick, { draftId });
   const { data: availablePlayers } = useQuery(api.drafts.getAvailablePlayers, { draftId });
   const { data: recentPicks } = useQuery(api.drafts.getRecentPicks, { draftId, limit: 10 });
+  const { data: draftStats } = useQuery(api.drafts.getDraftStats, { draftId });
   const { mutate: finishDraft } = useMutation(api.drafts.finishDraft);
   const { mutate: advancePick } = useMutation(api.drafts.advancePick);
   const { mutate: makePickMutation } = useMutation(api.drafts.makePick);
@@ -348,24 +349,41 @@ function DuringDraft() {
               {/* Quick Stats */}
               <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
                 <h3 class="text-xl font-bold text-white mb-4">Draft Stats</h3>
-                <dl class="space-y-2">
-                  <div class="flex justify-between">
-                    <dt class="text-slate-400">Total Picks:</dt>
-                    <dd class="text-white font-semibold">4 / 80</dd>
-                  </div>
-                  <div class="flex justify-between">
-                    <dt class="text-slate-400">Forwards:</dt>
-                    <dd class="text-white font-semibold">2</dd>
-                  </div>
-                  <div class="flex justify-between">
-                    <dt class="text-slate-400">Defense:</dt>
-                    <dd class="text-white font-semibold">1</dd>
-                  </div>
-                  <div class="flex justify-between">
-                    <dt class="text-slate-400">Goalies:</dt>
-                    <dd class="text-white font-semibold">1</dd>
-                  </div>
-                </dl>
+                <Show
+                  when={draftStats?.()}
+                  fallback={
+                    <div class="text-center py-4 text-slate-400 text-sm">
+                      Loading stats...
+                    </div>
+                  }
+                >
+                  {(stats) => (
+                    <dl class="space-y-2">
+                      <div class="flex justify-between">
+                        <dt class="text-slate-400">Total Picks:</dt>
+                        <dd class="text-white font-semibold">
+                          {stats().totalPicks} / {stats().maxPicks}
+                        </dd>
+                      </div>
+                      <div class="flex justify-between">
+                        <dt class="text-slate-400">Current Pick:</dt>
+                        <dd class="text-white font-semibold">#{stats().currentPick}</dd>
+                      </div>
+                      <div class="flex justify-between">
+                        <dt class="text-slate-400">Forwards:</dt>
+                        <dd class="text-white font-semibold">{stats().forwards}</dd>
+                      </div>
+                      <div class="flex justify-between">
+                        <dt class="text-slate-400">Defense:</dt>
+                        <dd class="text-white font-semibold">{stats().defense}</dd>
+                      </div>
+                      <div class="flex justify-between">
+                        <dt class="text-slate-400">Goalies:</dt>
+                        <dd class="text-white font-semibold">{stats().goalies}</dd>
+                      </div>
+                    </dl>
+                  )}
+                </Show>
               </div>
 
               {/* Admin Actions (for host only) */}

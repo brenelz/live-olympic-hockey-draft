@@ -465,17 +465,70 @@ export const getAvailablePlayers = query({
             (player) => !pickedPlayerIds.has(player._id)
         );
 
-        // Sort by position, then name
-        availablePlayers.sort((a, b) => {
-            if (a.position !== b.position) {
-                const positionOrder = { C: 1, LW: 2, RW: 3, D: 4, G: 5 };
-                return (positionOrder[a.position as keyof typeof positionOrder] || 99) -
-                    (positionOrder[b.position as keyof typeof positionOrder] || 99);
-            }
-            return a.name.localeCompare(b.name);
-        });
+        // Sort alphabetically by name
+        availablePlayers.sort((a, b) => a.name.localeCompare(b.name));
 
         return availablePlayers;
+    },
+});
+
+// Get draft statistics
+export const getDraftStats = query({
+    args: {
+        draftId: v.id("drafts"),
+    },
+    handler: async (ctx, args) => {
+        // Get draft info
+        const draft = await ctx.db.get(args.draftId);
+        if (!draft) {
+            return null;
+        }
+
+        // Get all teams
+        const teams = await ctx.db
+            .query("draftTeams")
+            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .collect();
+
+        const numTeams = teams.length;
+        const maxPicks = numTeams * 10; // Assuming 10 rounds
+
+        // Get all picks for this draft
+        const allPicks = await Promise.all(
+            teams.map(async (team) => {
+                const picks = await ctx.db
+                    .query("draftPicks")
+                    .withIndex("draftTeamId", (q) => q.eq("draftTeamId", team._id))
+                    .collect();
+                return picks;
+            })
+        );
+
+        const picks = allPicks.flat();
+
+        // Get player details for position counting
+        const picksWithPlayers = await Promise.all(
+            picks.map(async (pick) => {
+                const player = await ctx.db.get(pick.draftablePlayerId);
+                return player?.position;
+            })
+        );
+
+        // Count by position
+        const forwards = picksWithPlayers.filter(
+            (pos) => pos === "C" || pos === "LW" || pos === "RW"
+        ).length;
+        const defense = picksWithPlayers.filter((pos) => pos === "D").length;
+        const goalies = picksWithPlayers.filter((pos) => pos === "G").length;
+
+        return {
+            totalPicks: picks.length,
+            maxPicks,
+            forwards,
+            defense,
+            goalies,
+            currentPick: draft.currentDraftPickNumber,
+        };
     },
 });
 

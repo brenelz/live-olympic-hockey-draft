@@ -5,7 +5,8 @@ export default defineSchema({
     drafts: defineTable({
         name: v.string(),
         startDatetime: v.number(), // Unix timestamp in milliseconds
-        hostBetterAuthUserId: v.string(),
+        hostBetterAuthUserId: v.optional(v.string()),
+        hostUserId: v.optional(v.string()), // Legacy field for backward compatibility
         status: v.union(
             v.literal("PRE"),
             v.literal("DURING"),
@@ -37,7 +38,8 @@ export default defineSchema({
         .index("draftablePlayerId", ["draftablePlayerId"]),
 
     todos: defineTable({
-        betterAuthUserId: v.string(),
+        betterAuthUserId: v.optional(v.string()),
+        userId: v.optional(v.string()), // Legacy field for backward compatibility
         text: v.string(),
         isCompleted: v.boolean(),
     }).index("betterAuthUserId", ["betterAuthUserId"]),

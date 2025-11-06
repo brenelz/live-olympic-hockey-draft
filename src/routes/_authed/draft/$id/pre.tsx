@@ -1,5 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/solid-router";
-import { For, createSignal } from "solid-js";
+import { For, createSignal, Show, onMount, onCleanup } from "solid-js";
+import { useQuery, useMutation } from "convex-solidjs";
+import { api } from "../../../../../convex/_generated/api";
+import { authClient } from "~/lib/auth-client";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 
 export const Route = createFileRoute("/_authed/draft/$id/pre")({
   component: PreDraft,
@@ -9,115 +13,196 @@ function PreDraft() {
   const params = Route.useParams();
   const navigate = useNavigate();
   const [copySuccess, setCopySuccess] = createSignal(false);
+  const [timeRemaining, setTimeRemaining] = createSignal<number | null>(null);
+  const [isStarting, setIsStarting] = createSignal(false);
+  const [error, setError] = createSignal("");
 
-  // Dummy data
-  const draftInfo = {
-    name: "2026 Olympics Draft",
-    startTime: "Feb 15, 2025 at 7:00 PM",
-    host: "John Doe",
-    status: "PRE" as const,
+  const draftId = params().id as Id<"drafts">;
+  const session = authClient.useSession();
+
+  // Fetch draft data
+  const { data: draft } = useQuery(api.drafts.getDraftById, { draftId });
+  const { data: teams } = useQuery(api.drafts.getDraftTeams, { draftId });
+
+  // Start draft mutation
+  const { mutate: startDraft } = useMutation(api.drafts.startDraft);
+
+  // Check if current user is host
+  const isHost = () => {
+    const user = session()?.data?.user;
+    return user && draft?.() && draft()!.hostBetterAuthUserId && draft()!.hostBetterAuthUserId === user.id;
   };
 
-  const teams = [
-    { id: 1, name: "Maple Leafs", owner: "John Doe", order: 1 },
-    { id: 2, name: "Bruins", owner: "Jane Smith", order: 2 },
-    { id: 3, name: "Penguins", owner: "Bob Johnson", order: 3 },
-    { id: 4, name: "Lightning", owner: "Alice Williams", order: 4 },
-    { id: 5, name: "Avalanche", owner: "Charlie Brown", order: 5 },
-    { id: 6, name: "Empty Slot", owner: null, order: 6 },
-    { id: 7, name: "Empty Slot", owner: null, order: 7 },
-    { id: 8, name: "Empty Slot", owner: null, order: 8 },
-  ];
+  // Countdown timer
+  onMount(() => {
+    const updateCountdown = () => {
+      if (draft?.()) {
+        const now = Date.now();
+        const startTime = draft()!.startDatetime;
+        const remaining = startTime - now;
+        setTimeRemaining(remaining > 0 ? remaining : 0);
+      }
+    };
 
-  const inviteLink = `${window.location.origin}/draft/join?id=${params().id}`;
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
 
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+    onCleanup(() => clearInterval(interval));
+  });
+
+  const formatTimeRemaining = (ms: number) => {
+    if (ms <= 0) return "Ready to start!";
+
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) {
+      return `${days}d ${hours % 24}h ${minutes % 60}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
   };
 
-  const startDraft = () => {
-    navigate({ to: "/draft/$id/during", params: { id: params().id } });
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
+
+  const handleStartDraft = async () => {
+    if (!isHost()) {
+      setError("Only the host can start the draft");
+      return;
+    }
+
+    const remaining = timeRemaining();
+    if (remaining !== null && remaining > 0) {
+      setError("Cannot start draft before the scheduled start time");
+      return;
+    }
+
+    setIsStarting(true);
+    setError("");
+
+    try {
+      await startDraft({ draftId });
+      navigate({ to: "/draft/$id/during", params: { id: draftId } });
+    } catch (err) {
+      console.error("Failed to start draft:", err);
+      setError(err instanceof Error ? err.message : "Failed to start draft");
+      setIsStarting(false);
+    }
+  };
+
+  const currentUserId = () => session()?.data?.user?.id;
 
   return (
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 p-8">
       <div class="max-w-6xl mx-auto">
         {/* Header */}
-        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
-          <div class="flex items-start justify-between mb-6">
-            <div>
-              <h1 class="text-4xl font-bold text-white mb-2">
-                {draftInfo.name}
-              </h1>
-              <div class="flex items-center gap-4 text-slate-300">
-                <span>📅 {draftInfo.startTime}</span>
-                <span>•</span>
-                <span>👤 Hosted by {draftInfo.host}</span>
+        <Show when={draft?.()}>
+          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
+            <div class="flex items-start justify-between mb-6">
+              <div>
+                <h1 class="text-4xl font-bold text-white mb-2">
+                  {draft()!.name}
+                </h1>
+                <div class="flex items-center gap-4 text-slate-300">
+                  <span>📅 {formatDate(draft()!.startDatetime)}</span>
+                  <span>•</span>
+                  <span>👥 {teams?.()?.length || 0} {teams?.()?.length === 1 ? "team" : "teams"} joined</span>
+                </div>
+              </div>
+              <span class="px-4 py-2 bg-yellow-600/20 text-yellow-300 rounded-lg font-medium border border-yellow-600/30">
+                Pre-Draft
+              </span>
+            </div>
+
+            {/* Countdown */}
+            <div class="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-6 border border-green-700/30 mb-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-green-300 text-sm font-medium mb-1">Draft Starts In</p>
+                  <p class="text-3xl font-bold text-white">
+                    {timeRemaining() !== null ? formatTimeRemaining(timeRemaining()!) : "Loading..."}
+                  </p>
+                </div>
+                <div class="text-6xl">⏰</div>
               </div>
             </div>
-            <span class="px-4 py-2 bg-yellow-600/20 text-yellow-300 rounded-lg font-medium border border-yellow-600/30">
-              Pre-Draft
-            </span>
           </div>
+        </Show>
 
-          {/* Invite Link */}
-          <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-            <label class="block text-sm font-medium text-slate-200 mb-2">
-              Invite Link
-            </label>
-            <div class="flex gap-2">
-              <input
-                type="text"
-                value={inviteLink}
-                readonly
-                class="flex-1 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 font-mono text-sm"
-              />
-              <button
-                onClick={copyInviteLink}
-                class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
-              >
-                {copySuccess() ? "Copied!" : "Copy"}
-              </button>
-            </div>
+        {/* Error Message */}
+        <Show when={error()}>
+          <div class="bg-red-900/30 border border-red-700/50 rounded-lg p-4 mb-6">
+            <p class="text-red-300 text-sm">{error()}</p>
           </div>
-        </div>
+        </Show>
 
         {/* Teams List */}
         <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
           <h2 class="text-2xl font-bold text-white mb-6">
-            Draft Order & Teams
+            Draft Order & Teams ({teams?.()?.length || 0})
           </h2>
-          <div class="space-y-3">
-            <For each={teams}>
-              {(team) => (
-                <div
-                  class={`flex items-center justify-between p-4 rounded-lg border ${team.owner
-                    ? "bg-slate-900/50 border-slate-600"
-                    : "bg-slate-900/20 border-slate-700 border-dashed"
-                    }`}
-                >
-                  <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-full text-white font-bold">
-                      {team.order}
+          <Show
+            when={teams?.() && teams()!.length > 0}
+            fallback={
+              <div class="text-center py-8 text-slate-400">
+                <p>No teams have joined yet. Share the invite link above!</p>
+              </div>
+            }
+          >
+            <div class="space-y-3">
+              <For each={teams?.() || []}>
+                {(team) => {
+                  const isCurrentUser = () => currentUserId() === team.betterAuthUserId;
+                  return (
+                    <div
+                      class={`flex items-center justify-between p-4 rounded-lg border ${"bg-slate-900/50 border-slate-600"
+                        } ${isCurrentUser() ? "ring-2 ring-green-500/50" : ""}`}
+                    >
+                      <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-full text-white font-bold">
+                          {team.draftOrderNumber}
+                        </div>
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <p class="text-white font-semibold">{team.teamName}</p>
+                            {isCurrentUser() && (
+                              <span class="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded-full border border-green-600/30">
+                                You
+                              </span>
+                            )}
+                          </div>
+                          <p class="text-slate-400 text-sm">Joined</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        {/* Logged in indicator - simplified for now */}
+                        <div class="flex items-center gap-1">
+                          <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span class="text-green-400 text-xs">Online</span>
+                        </div>
+                        <span class="text-green-400 text-sm">✓ Joined</span>
+                      </div>
                     </div>
-                    <div>
-                      <p class="text-white font-semibold">{team.name}</p>
-                      {team.owner && (
-                        <p class="text-slate-400 text-sm">{team.owner}</p>
-                      )}
-                    </div>
-                  </div>
-                  {team.owner ? (
-                    <span class="text-green-400 text-sm">✓ Joined</span>
-                  ) : (
-                    <span class="text-slate-500 text-sm">Waiting...</span>
-                  )}
-                </div>
-              )}
-            </For>
-          </div>
+                  );
+                }}
+              </For>
+            </div>
+          </Show>
         </div>
 
         {/* Action Buttons */}
@@ -128,12 +213,24 @@ function PreDraft() {
           >
             Back to Dashboard
           </button>
-          <button
-            onClick={startDraft}
-            class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
-          >
-            Start Draft →
-          </button>
+          <Show when={isHost()}>
+            <button
+              onClick={handleStartDraft}
+              disabled={isStarting() || (timeRemaining() !== null && timeRemaining()! > 0)}
+              class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
+            >
+              {isStarting()
+                ? "Starting..."
+                : timeRemaining() !== null && timeRemaining()! > 0
+                  ? `Start Draft (${formatTimeRemaining(timeRemaining()!)})`
+                  : "Start Draft →"}
+            </button>
+          </Show>
+          <Show when={!isHost()}>
+            <div class="flex-1 px-6 py-3 bg-slate-700/50 text-slate-400 rounded-lg text-center">
+              Waiting for host to start the draft...
+            </div>
+          </Show>
         </div>
       </div>
     </div>

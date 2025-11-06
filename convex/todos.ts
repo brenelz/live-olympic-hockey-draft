@@ -67,7 +67,7 @@ export const toggle = mutation({
         }
 
         // Verify the todo belongs to the current user
-        if (todo.betterAuthUserId !== betterAuthUserId) {
+        if (!todo.betterAuthUserId || todo.betterAuthUserId !== betterAuthUserId) {
             throw new Error("Unauthorized");
         }
 
@@ -96,7 +96,7 @@ export const remove = mutation({
         }
 
         // Verify the todo belongs to the current user
-        if (todo.betterAuthUserId !== betterAuthUserId) {
+        if (!todo.betterAuthUserId || todo.betterAuthUserId !== betterAuthUserId) {
             throw new Error("Unauthorized");
         }
 

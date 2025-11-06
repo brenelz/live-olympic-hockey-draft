@@ -209,3 +209,64 @@ export const getUserDrafts = query({
     },
 });
 
+export const getDraftTeams = query({
+    args: {
+        draftId: v.id("drafts"),
+    },
+    handler: async (ctx, args) => {
+        const teams = await ctx.db
+            .query("draftTeams")
+            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .collect();
+
+        // Sort by draft order
+        teams.sort((a, b) => a.draftOrderNumber - b.draftOrderNumber);
+
+        return teams;
+    },
+});
+
+export const startDraft = mutation({
+    args: {
+        draftId: v.id("drafts"),
+    },
+    handler: async (ctx, args) => {
+        // Get the current authenticated user
+        const authUser = await authComponent.getAuthUser(ctx);
+        if (!authUser || !authUser._id) {
+            throw new Error("User must be authenticated to start a draft");
+        }
+
+        const betterAuthUserId = authUser._id;
+
+        // Get the draft
+        const draft = await ctx.db.get(args.draftId);
+        if (!draft) {
+            throw new Error("Draft not found");
+        }
+
+        // Check if user is the host
+        if (!draft.hostBetterAuthUserId || draft.hostBetterAuthUserId !== betterAuthUserId) {
+            throw new Error("Only the host can start the draft");
+        }
+
+        // Check if draft is in PRE status
+        if (draft.status !== "PRE") {
+            throw new Error("Draft is not in pre-draft status");
+        }
+
+        // Check if countdown is over (start time has passed)
+        const now = Date.now();
+        if (draft.startDatetime > now) {
+            throw new Error("Cannot start draft before the scheduled start time");
+        }
+
+        // Update draft status to DURING
+        await ctx.db.patch(args.draftId, {
+            status: "DURING",
+        });
+
+        return { success: true };
+    },
+});
+

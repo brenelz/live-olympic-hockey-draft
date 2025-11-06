@@ -6,7 +6,7 @@ export const Route = createFileRoute("/_authed/draft/$id/pre")({
 });
 
 function PreDraft() {
-  const { id } = Route.useParams();
+  const params = Route.useParams();
   const navigate = useNavigate();
   const [copySuccess, setCopySuccess] = createSignal(false);
 
@@ -29,7 +29,7 @@ function PreDraft() {
     { id: 8, name: "Empty Slot", owner: null, order: 8 },
   ];
 
-  const inviteLink = `${window.location.origin}/draft/join?id=${id}`;
+  const inviteLink = `${window.location.origin}/draft/join?id=${params().id}`;
 
   const copyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink);
@@ -38,7 +38,7 @@ function PreDraft() {
   };
 
   const startDraft = () => {
-    navigate({ to: "/draft/$id/during", params: { id } });
+    navigate({ to: "/draft/$id/during", params: { id: params().id } });
   };
 
   return (

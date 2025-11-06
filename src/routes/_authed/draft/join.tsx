@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/solid-router";
-import { createSignal } from "solid-js";
+import { createFileRoute } from "@tanstack/solid-router";
+import { createSignal, Show, createEffect } from "solid-js";
 
 export const Route = createFileRoute("/_authed/draft/join")({
   component: JoinDraft,
@@ -11,14 +11,32 @@ export const Route = createFileRoute("/_authed/draft/join")({
 });
 
 function JoinDraft() {
-  const navigate = useNavigate();
   const search = Route.useSearch();
-  const [teamName, setTeamName] = createSignal("");
+  const [error, setError] = createSignal("");
+  const [draftId, setDraftId] = createSignal<string | undefined>(search().id);
+  const [draftIdInput, setDraftIdInput] = createSignal(search().id || "");
 
-  const handleJoinDraft = (e: Event) => {
+  // Update draftIdInput when draftId changes
+  createEffect(() => {
+    if (draftId()) {
+      setDraftIdInput(draftId() || "");
+    }
+  });
+
+  const handleLoadDraft = (e: Event) => {
     e.preventDefault();
-    navigate({ to: "/draft/$id/pre", params: { id: search().id } });
+    const id = draftIdInput().trim();
+    if (id) {
+      setDraftId(id);
+      setError("");
+    } else {
+      setError("Please enter a draft ID");
+    }
   };
+
+
+
+
 
   return (
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8">
@@ -43,77 +61,49 @@ function JoinDraft() {
             </div>
             <h1 class="text-4xl font-bold text-white mb-2">Join Draft</h1>
             <p class="text-slate-400">
-              You've been invited to join an Olympic hockey draft
+              Enter a draft ID or use an invite link
             </p>
           </div>
 
-          {/* Draft Info */}
-          <div class="bg-slate-900/50 rounded-lg p-6 mb-6 border border-slate-600">
-            <h2 class="text-xl font-semibold text-white mb-4">Draft Details</h2>
-            <dl class="space-y-3">
-              <div class="flex justify-between">
-                <dt class="text-slate-400">Draft ID:</dt>
-                <dd class="text-white font-mono">{search().id || "Not provided"}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-slate-400">Draft Name:</dt>
-                <dd class="text-white">2026 Olympics Draft</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-slate-400">Host:</dt>
-                <dd class="text-white">John Doe</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-slate-400">Start Time:</dt>
-                <dd class="text-white">Feb 15, 2025 at 7:00 PM</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-slate-400">Teams Joined:</dt>
-                <dd class="text-white">5 / 8</dd>
-              </div>
-            </dl>
-          </div>
-
-          {/* Join Form */}
-          <form onSubmit={handleJoinDraft} class="space-y-6">
-            <div>
+          {/* Draft ID Input - Always visible */}
+          <form onSubmit={handleLoadDraft} class="mb-6">
+            <div class="bg-slate-900/50 rounded-lg p-6 border border-slate-600">
               <label
-                for="team-name"
-                class="block text-sm font-medium text-slate-200 mb-2"
+                for="draft-id-input"
+                class="block text-sm font-medium text-slate-200 mb-3"
               >
-                Your Team Name
+                Draft ID
               </label>
-              <input
-                id="team-name"
-                type="text"
-                value={teamName()}
-                onInput={(e) => setTeamName(e.currentTarget.value)}
-                placeholder="e.g., Maple Leafs, Bruins, etc."
-                class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                required
-              />
+              <div class="flex gap-3">
+                <input
+                  id="draft-id-input"
+                  type="text"
+                  value={draftIdInput()}
+                  onInput={(e) => setDraftIdInput(e.currentTarget.value)}
+                  placeholder="Paste draft ID here..."
+                  class="flex-1 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-mono text-sm"
+                  required
+                />
+                <button
+                  type="submit"
+                  class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-purple-500/30 whitespace-nowrap"
+                >
+                  Load Draft
+                </button>
+              </div>
               <p class="text-sm text-slate-400 mt-2">
-                Choose a unique name for your team
+                Get the draft ID from the person who created the draft
               </p>
             </div>
-
-            {/* Action Buttons */}
-            <div class="flex gap-4 pt-4">
-              <button
-                type="button"
-                onClick={() => navigate({ to: "/" })}
-                class="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-purple-500/30"
-              >
-                Join Draft
-              </button>
-            </div>
           </form>
+
+          {/* Error Message */}
+          <Show when={error()}>
+            <div class="p-4 bg-red-900/30 border border-red-700/50 rounded-lg mb-6">
+              <p class="text-red-300 text-sm">{error()}</p>
+            </div>
+          </Show>
+
         </div>
 
         {/* Warning Card */}
@@ -137,7 +127,7 @@ function JoinDraft() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 

@@ -47,10 +47,15 @@ export const getDraftById = query({
 
 export const getDraftWithTeamCount = query({
     args: {
-        draftId: v.id("drafts"),
+        draftId: v.optional(v.id("drafts")),
     },
     handler: async (ctx, args) => {
-        const draft = await ctx.db.get(args.draftId);
+        if (!args.draftId) {
+            return null;
+        }
+
+        const draftId = args.draftId;
+        const draft = await ctx.db.get(draftId);
         if (!draft) {
             return null;
         }
@@ -58,7 +63,7 @@ export const getDraftWithTeamCount = query({
         // Get team count for this draft
         const teams = await ctx.db
             .query("draftTeams")
-            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .withIndex("draftId", (q) => q.eq("draftId", draftId))
             .collect();
 
         return {
@@ -70,9 +75,14 @@ export const getDraftWithTeamCount = query({
 
 export const isUserInDraft = query({
     args: {
-        draftId: v.id("drafts"),
+        draftId: v.optional(v.id("drafts")),
     },
     handler: async (ctx, args) => {
+        if (!args.draftId) {
+            return false;
+        }
+
+        const draftId = args.draftId;
         const authUser = await authComponent.getAuthUser(ctx);
         if (!authUser || !authUser._id) {
             return false;
@@ -83,7 +93,7 @@ export const isUserInDraft = query({
         // Check if user already has a team in this draft
         const existingTeam = await ctx.db
             .query("draftTeams")
-            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .withIndex("draftId", (q) => q.eq("draftId", draftId))
             .filter((q) => q.eq(q.field("betterAuthUserId"), betterAuthUserId))
             .first();
 

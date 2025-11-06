@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/solid-router";
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { useMutation } from "convex-solidjs";
+import { api } from "../../../../convex/_generated/api";
 
 export const Route = createFileRoute("/_authed/draft/create")({
   component: CreateDraft,
@@ -7,20 +9,48 @@ export const Route = createFileRoute("/_authed/draft/create")({
 
 function CreateDraft() {
   const navigate = useNavigate();
+  
+  // Get current date and time as defaults
+  const now = new Date();
+  const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+  const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+  
   const [draftName, setDraftName] = createSignal("");
-  const [startDate, setStartDate] = createSignal("");
-  const [startTime, setStartTime] = createSignal("");
+  const [startDate, setStartDate] = createSignal(currentDate);
+  const [startTime, setStartTime] = createSignal(currentTime);
+  const [isCreating, setIsCreating] = createSignal(false);
+  const [error, setError] = createSignal("");
 
-  const handleCreateDraft = (e: Event) => {
+  const { mutate: createDraft } = useMutation(api.drafts.create);
+
+  const handleCreateDraft = async (e: Event) => {
     e.preventDefault();
-    // TODO: Implement draft creation logic
-    console.log("Creating draft:", {
-      name: draftName(),
-      date: startDate(),
-      time: startTime(),
-    });
-    // Navigate to pre-draft page after creation
-    navigate({ to: "/draft/$id/pre", params: { id: "draft-123" } });
+    setError("");
+    setIsCreating(true);
+
+    try {
+      // Combine date and time into a Unix timestamp
+      const dateTimeString = `${startDate()}T${startTime()}`;
+      const startDatetime = new Date(dateTimeString).getTime();
+
+      // Validate the datetime
+      if (isNaN(startDatetime)) {
+        throw new Error("Invalid date or time selected");
+      }
+
+      // Create the draft
+      const draftId = await createDraft({
+        name: draftName(),
+        startDatetime,
+      });
+
+      // Navigate to the newly created draft's pre-draft page
+      navigate({ to: "/draft/$id/pre", params: { id: draftId } });
+    } catch (err) {
+      console.error("Failed to create draft:", err);
+      setError(err instanceof Error ? err.message : "Failed to create draft");
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -33,6 +63,13 @@ function CreateDraft() {
           </p>
 
           <form onSubmit={handleCreateDraft} class="space-y-6">
+            {/* Error Message */}
+            <Show when={error()}>
+              <div class="p-4 bg-red-900/30 border border-red-700/50 rounded-lg">
+                <p class="text-red-300 text-sm">{error()}</p>
+              </div>
+            </Show>
+
             {/* Draft Name */}
             <div>
               <label
@@ -99,9 +136,10 @@ function CreateDraft() {
               </button>
               <button
                 type="submit"
-                class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/30"
+                disabled={isCreating()}
+                class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/30"
               >
-                Create Draft
+                {isCreating() ? "Creating..." : "Create Draft"}
               </button>
             </div>
           </form>

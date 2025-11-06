@@ -30,6 +30,7 @@ function PreDraft() {
   const { mutate: startDraft } = useMutation(api.drafts.startDraft);
   const { mutate: updatePresence } = useMutation(api.drafts.updatePresence);
   const { mutate: removePresence } = useMutation(api.drafts.removePresence);
+  const { mutate: randomizeDraftTeams } = useMutation(api.drafts.randomizeDraftTeams);
 
   // Check if current user is host
   const isHost = () => {
@@ -106,6 +107,14 @@ function PreDraft() {
       hour: "numeric",
       minute: "2-digit",
     });
+  };
+
+  const handleRandomizeDraftTeams = async () => {
+    if (!isHost()) {
+      setError("Only the host can randomize the draft");
+      return;
+    }
+    await randomizeDraftTeams({ draftId });
   };
 
   const handleStartDraft = async () => {
@@ -300,6 +309,12 @@ function PreDraft() {
             </button>
             <Show when={isHost()}>
               <button
+                onClick={handleRandomizeDraftTeams}
+                class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
+              >
+                Randomize Order
+              </button>
+              <button
                 onClick={handleStartDraft}
                 disabled={isStarting() || (timeRemaining() !== null && timeRemaining()! > 0)}
                 class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
@@ -319,6 +334,6 @@ function PreDraft() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

@@ -261,10 +261,68 @@ export const startDraft = mutation({
             throw new Error("Cannot start draft before the scheduled start time");
         }
 
+
+
         // Update draft status to DURING
         await ctx.db.patch(args.draftId, {
             status: "DURING",
         });
+
+        return { success: true };
+    },
+});
+
+export const randomizeDraftTeams = mutation({
+    args: {
+        draftId: v.id("drafts"),
+    },
+    handler: async (ctx, args) => {
+        // Get the current authenticated user
+        const authUser = await authComponent.getAuthUser(ctx);
+        if (!authUser || !authUser._id) {
+            throw new Error("User must be authenticated to start a draft");
+        }
+
+        const betterAuthUserId = authUser._id;
+
+        // Get the draft
+        const draft = await ctx.db.get(args.draftId);
+        if (!draft) {
+            throw new Error("Draft not found");
+        }
+
+        // Check if user is the host
+        if (!draft.hostBetterAuthUserId || draft.hostBetterAuthUserId !== betterAuthUserId) {
+            throw new Error("Only the host can randomize the draft");
+        }
+
+        // Check if draft is in PRE status
+        if (draft.status !== "PRE") {
+            throw new Error("Draft is not in pre-draft status");
+        }
+
+        // Fetch all draft teams for this draft
+        const draftTeams = await ctx.db.query("draftTeams")
+            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .collect();
+
+        if (!draftTeams.length) {
+            throw new Error("No teams found for this draft");
+        }
+
+        // Shuffle teams using Fisher-Yates
+        const shuffledTeams = [...draftTeams];
+        for (let i = shuffledTeams.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledTeams[i], shuffledTeams[j]] = [shuffledTeams[j], shuffledTeams[i]];
+        }
+
+        // Update draftOrderNumber for each team
+        for (let i = 0; i < shuffledTeams.length; i++) {
+            await ctx.db.patch(shuffledTeams[i]._id, {
+                draftOrderNumber: i + 1,
+            });
+        }
 
         return { success: true };
     },

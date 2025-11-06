@@ -3,21 +3,16 @@ import { createSignal } from "solid-js";
 import { authClient } from "~/lib/auth-client";
 import { Button } from "~/components/ui/button";
 import { TodoList } from "~/components/TodoList";
-import { fetchTodos } from "~/lib/auth";
 
 export const Route = createFileRoute("/_authed/dashboard")({
   component: Dashboard,
-  loader: async () => {
-    const todos = await fetchTodos();
-    return { todos };
-  },
+
 });
 
 function Dashboard() {
   const navigate = useNavigate();
   const session = authClient.useSession();
   const [isSigningOut, setIsSigningOut] = createSignal(false);
-  const loaderData = Route.useLoaderData();
 
 
   const handleSignOut = async () => {
@@ -33,7 +28,6 @@ function Dashboard() {
 
   return (
     <div class="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-800">
-      <pre>{JSON.stringify(loaderData().todos, null, 2)}</pre>
       <header class="bg-white/10 backdrop-blur-md border-b border-white/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center h-16">
@@ -147,7 +141,7 @@ function Dashboard() {
           </div>
 
           {/* Todo List */}
-          {/* <TodoList /> */}
+          <TodoList />
 
           {/* Recent Activity */}
           <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">

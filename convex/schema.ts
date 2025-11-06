@@ -46,4 +46,10 @@ export default defineSchema({
     })
         .index("email", ["email"])
         .index("betterAuthUserId", ["betterAuthUserId"]),
+
+    todos: defineTable({
+        userId: v.id("users"),
+        text: v.string(),
+        isCompleted: v.boolean(),
+    }).index("userId", ["userId"]),
 });

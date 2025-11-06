@@ -200,12 +200,6 @@ function PostDraft() {
             >
               Back to Dashboard
             </button>
-            <button
-              onClick={() => console.log("Export draft results")}
-              class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium"
-            >
-              Export Results
-            </button>
           </div>
         </div>
       </div>

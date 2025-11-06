@@ -37,6 +37,14 @@ function PreDraft() {
     return user && draft?.() && draft()!.hostBetterAuthUserId && draft()!.hostBetterAuthUserId === user.id;
   };
 
+  // Redirect to during page if draft status is DURING
+  createEffect(() => {
+    const draftData = draft?.();
+    if (draftData && draftData.status === "DURING") {
+      navigate({ to: "/draft/$id/during", params: { id: draftId } });
+    }
+  });
+
   // Countdown timer
   onMount(() => {
     const updateCountdown = () => {

@@ -1,6 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/solid-router";
-import { For, createSignal } from "solid-js";
+import { useMutation, useQuery } from "convex-solidjs";
+import { api } from "convex/_generated/api";
+import type { Id } from "convex/_generated/dataModel";
+import { For, Show, createSignal } from "solid-js";
 import { Header } from "~/components/header";
+import { authClient } from "~/lib/auth-client";
 
 export const Route = createFileRoute("/_authed/draft/$id/during")({
   component: DuringDraft,
@@ -12,6 +16,15 @@ function DuringDraft() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = createSignal("");
   const [selectedPlayer, setSelectedPlayer] = createSignal<string | null>(null);
+
+  const session = authClient.useSession();
+  const { data: draft } = useQuery(api.drafts.getDraftById, { draftId: id() as Id<"drafts"> });
+  const { mutate: finishDraft } = useMutation(api.drafts.finishDraft);
+
+  const isHost = () => {
+    const user = session()?.data?.user;
+    return user && draft?.() && draft()!.hostBetterAuthUserId && draft()!.hostBetterAuthUserId === user.id;
+  };
 
   // Dummy data
   const currentPick = {
@@ -45,7 +58,8 @@ function DuringDraft() {
     }
   };
 
-  const finishDraft = () => {
+  const handleFinishDraft = async () => {
+    await finishDraft({ draftId: id() as Id<"drafts"> });
     navigate({ to: "/draft/$id/post", params: { id: id() } });
   };
 
@@ -191,12 +205,14 @@ function DuringDraft() {
               </div>
 
               {/* Admin Actions (for host only) */}
-              <button
-                onClick={finishDraft}
-                class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
-              >
-                Finish Draft (Demo)
-              </button>
+              <Show when={isHost()}>
+                <button
+                  onClick={handleFinishDraft}
+                  class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Finish Draft
+                </button>
+              </Show>
             </div>
           </div>
         </div>

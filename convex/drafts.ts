@@ -270,6 +270,44 @@ export const startDraft = mutation({
     },
 });
 
+export const finishDraft = mutation({
+    args: {
+        draftId: v.id("drafts"),
+    },
+    handler: async (ctx, args) => {
+        // Get the current authenticated user
+        const authUser = await authComponent.getAuthUser(ctx);
+        if (!authUser || !authUser._id) {
+            throw new Error("User must be authenticated to start a draft");
+        }
+
+        const betterAuthUserId = authUser._id;
+
+        // Get the draft
+        const draft = await ctx.db.get(args.draftId);
+        if (!draft) {
+            throw new Error("Draft not found");
+        }
+
+        // Check if user is the host
+        if (!draft.hostBetterAuthUserId || draft.hostBetterAuthUserId !== betterAuthUserId) {
+            throw new Error("Only the host can finish the draft");
+        }
+
+        // Check if draft is in PRE status
+        if (draft.status !== "DURING") {
+            throw new Error("Draft is not in during status");
+        }
+
+        // Update draft status to DURING
+        await ctx.db.patch(args.draftId, {
+            status: "POST",
+        });
+
+        return { success: true };
+    },
+});
+
 // Update heartbeat to track user presence in a draft
 export const updatePresence = mutation({
     args: {

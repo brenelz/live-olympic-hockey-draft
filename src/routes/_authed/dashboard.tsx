@@ -13,7 +13,6 @@ function Dashboard() {
   const session = authClient.useSession();
   const [isSigningOut, setIsSigningOut] = createSignal(false);
 
-
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
@@ -30,7 +29,7 @@ function Dashboard() {
       <header class="bg-white/10 backdrop-blur-md border-b border-white/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center h-16">
-            <Link href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <Link to="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
               <div class="p-2 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg">
                 <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                   {/* Hockey puck icon */}
@@ -46,6 +45,22 @@ function Dashboard() {
               <div class="text-right hidden sm:block">
                 <p class="text-sm font-medium text-white">{session().data?.user?.name}</p>
                 <p class="text-xs text-slate-300">{session().data?.user?.email}</p>
+              </div>
+              {/* User Avatar */}
+              <div class="relative">
+                {session().data?.user?.image ? (
+                  <img
+                    src={session().data.user.image ?? ""}
+                    alt={session().data.user.name ?? "User"}
+                    class="w-10 h-10 rounded-full border-2 border-white/30 bg-slate-700 object-cover"
+                  />
+                ) : (
+                  <div class="w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <span class="text-white font-semibold text-sm">
+                      {session().data?.user?.name?.charAt(0).toUpperCase() || "U"}
+                    </span>
+                  </div>
+                )}
               </div>
               <Button
                 onClick={handleSignOut}
@@ -124,32 +139,96 @@ function Dashboard() {
           <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
             <h3 class="text-2xl font-bold text-slate-900 mb-6">Quick Actions</h3>
             <div class="grid sm:grid-cols-2 gap-4">
-              <Button class="h-16 text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Create New Draft
-              </Button>
-              <Button variant="outline" class="h-16 text-base font-semibold border-2">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Join Existing Draft
-              </Button>
+              <Link to="/draft/create">
+                <Button class="w-full h-16 text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30">
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create New Draft
+                </Button>
+              </Link>
+              <Link to="/draft/join" search={{ id: "" }}>
+                <Button variant="outline" class="w-full h-16 text-base font-semibold border-2">
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Join Existing Draft
+                </Button>
+              </Link>
             </div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Your Drafts */}
           <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-            <h3 class="text-2xl font-bold text-slate-900 mb-6">Recent Activity</h3>
-            <div class="text-center py-12">
-              <div class="inline-block p-4 bg-slate-100 rounded-full mb-4">
-                <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-              </div>
-              <p class="text-slate-600 font-medium">No recent activity</p>
-              <p class="text-sm text-slate-500 mt-2">Create a draft to get started!</p>
+            <h3 class="text-2xl font-bold text-slate-900 mb-6">Your Drafts</h3>
+
+            {/* Demo Drafts - Replace with real data later */}
+            <div class="space-y-4">
+              {/* Pre-Draft Example */}
+              <Link to="/draft/$id/pre" params={{ id: "draft-123" }}>
+                <div class="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border-2 border-yellow-200 hover:border-yellow-300 transition-all cursor-pointer hover:shadow-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">PRE-DRAFT</span>
+                      <h4 class="text-lg font-bold text-slate-900">2026 Olympics Draft</h4>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-slate-600">
+                    <span>📅 Feb 15, 2025 at 7:00 PM</span>
+                    <span>•</span>
+                    <span>👤 5/8 teams joined</span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Live Draft Example */}
+              <Link to="/draft/$id/during" params={{ id: "draft-456" }}>
+                <div class="p-6 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border-2 border-red-200 hover:border-red-300 transition-all cursor-pointer hover:shadow-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">LIVE</span>
+                      <h4 class="text-lg font-bold text-slate-900">Summer League Draft</h4>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-slate-600">
+                    <span>🎯 Round 3 • Pick #18</span>
+                    <span>•</span>
+                    <span>⏱️ Your pick in 2 turns</span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Completed Draft Example */}
+              <Link to="/draft/$id/post" params={{ id: "draft-789" }}>
+                <div class="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 hover:border-green-300 transition-all cursor-pointer hover:shadow-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">COMPLETE</span>
+                      <h4 class="text-lg font-bold text-slate-900">Winter Classic Draft</h4>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-slate-600">
+                    <span>✓ Completed Jan 28, 2025</span>
+                    <span>•</span>
+                    <span>🏆 Your team: Maple Leafs</span>
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p class="text-sm text-blue-800">
+                💡 <strong>Demo Mode:</strong> These are example drafts. Real draft data will appear here once you create or join a draft.
+              </p>
             </div>
           </div>
         </div>

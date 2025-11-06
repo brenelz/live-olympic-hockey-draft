@@ -13,6 +13,11 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthedDraftJoinRouteImport } from './routes/_authed/draft/join'
+import { Route as AuthedDraftCreateRouteImport } from './routes/_authed/draft/create'
+import { Route as AuthedDraftIdPreRouteImport } from './routes/_authed/draft/$id/pre'
+import { Route as AuthedDraftIdPostRouteImport } from './routes/_authed/draft/$id/post'
+import { Route as AuthedDraftIdDuringRouteImport } from './routes/_authed/draft/$id/during'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -33,30 +38,96 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedDraftJoinRoute = AuthedDraftJoinRouteImport.update({
+  id: '/draft/join',
+  path: '/draft/join',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDraftCreateRoute = AuthedDraftCreateRouteImport.update({
+  id: '/draft/create',
+  path: '/draft/create',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDraftIdPreRoute = AuthedDraftIdPreRouteImport.update({
+  id: '/draft/$id/pre',
+  path: '/draft/$id/pre',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDraftIdPostRoute = AuthedDraftIdPostRouteImport.update({
+  id: '/draft/$id/post',
+  path: '/draft/$id/post',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDraftIdDuringRoute = AuthedDraftIdDuringRouteImport.update({
+  id: '/draft/$id/during',
+  path: '/draft/$id/during',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthedDashboardRoute
+  '/draft/create': typeof AuthedDraftCreateRoute
+  '/draft/join': typeof AuthedDraftJoinRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/draft/$id/during': typeof AuthedDraftIdDuringRoute
+  '/draft/$id/post': typeof AuthedDraftIdPostRoute
+  '/draft/$id/pre': typeof AuthedDraftIdPreRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthedDashboardRoute
+  '/draft/create': typeof AuthedDraftCreateRoute
+  '/draft/join': typeof AuthedDraftJoinRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/draft/$id/during': typeof AuthedDraftIdDuringRoute
+  '/draft/$id/post': typeof AuthedDraftIdPostRoute
+  '/draft/$id/pre': typeof AuthedDraftIdPreRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
+  '/_authed/draft/create': typeof AuthedDraftCreateRoute
+  '/_authed/draft/join': typeof AuthedDraftJoinRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authed/draft/$id/during': typeof AuthedDraftIdDuringRoute
+  '/_authed/draft/$id/post': typeof AuthedDraftIdPostRoute
+  '/_authed/draft/$id/pre': typeof AuthedDraftIdPreRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/draft/create'
+    | '/draft/join'
+    | '/api/auth/$'
+    | '/draft/$id/during'
+    | '/draft/$id/post'
+    | '/draft/$id/pre'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/api/auth/$'
-  id: '__root__' | '/' | '/_authed' | '/_authed/dashboard' | '/api/auth/$'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/draft/create'
+    | '/draft/join'
+    | '/api/auth/$'
+    | '/draft/$id/during'
+    | '/draft/$id/post'
+    | '/draft/$id/pre'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/_authed/dashboard'
+    | '/_authed/draft/create'
+    | '/_authed/draft/join'
+    | '/api/auth/$'
+    | '/_authed/draft/$id/during'
+    | '/_authed/draft/$id/post'
+    | '/_authed/draft/$id/pre'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,15 +166,60 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/draft/join': {
+      id: '/_authed/draft/join'
+      path: '/draft/join'
+      fullPath: '/draft/join'
+      preLoaderRoute: typeof AuthedDraftJoinRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/draft/create': {
+      id: '/_authed/draft/create'
+      path: '/draft/create'
+      fullPath: '/draft/create'
+      preLoaderRoute: typeof AuthedDraftCreateRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/draft/$id/pre': {
+      id: '/_authed/draft/$id/pre'
+      path: '/draft/$id/pre'
+      fullPath: '/draft/$id/pre'
+      preLoaderRoute: typeof AuthedDraftIdPreRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/draft/$id/post': {
+      id: '/_authed/draft/$id/post'
+      path: '/draft/$id/post'
+      fullPath: '/draft/$id/post'
+      preLoaderRoute: typeof AuthedDraftIdPostRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/draft/$id/during': {
+      id: '/_authed/draft/$id/during'
+      path: '/draft/$id/during'
+      fullPath: '/draft/$id/during'
+      preLoaderRoute: typeof AuthedDraftIdDuringRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
   AuthedDashboardRoute: typeof AuthedDashboardRoute
+  AuthedDraftCreateRoute: typeof AuthedDraftCreateRoute
+  AuthedDraftJoinRoute: typeof AuthedDraftJoinRoute
+  AuthedDraftIdDuringRoute: typeof AuthedDraftIdDuringRoute
+  AuthedDraftIdPostRoute: typeof AuthedDraftIdPostRoute
+  AuthedDraftIdPreRoute: typeof AuthedDraftIdPreRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedDashboardRoute: AuthedDashboardRoute,
+  AuthedDraftCreateRoute: AuthedDraftCreateRoute,
+  AuthedDraftJoinRoute: AuthedDraftJoinRoute,
+  AuthedDraftIdDuringRoute: AuthedDraftIdDuringRoute,
+  AuthedDraftIdPostRoute: AuthedDraftIdPostRoute,
+  AuthedDraftIdPreRoute: AuthedDraftIdPreRoute,
 }
 
 const AuthedRouteWithChildren =

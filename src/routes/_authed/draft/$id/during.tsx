@@ -15,16 +15,20 @@ function DuringDraft() {
   const id = () => params().id;
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [selectedPlayer, setSelectedPlayer] = createSignal<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = createSignal<Id<"draftablePlayers"> | null>(null);
 
   const session = authClient.useSession();
   const draftId = id() as Id<"drafts">;
   const { data: draft } = useQuery(api.drafts.getDraftById, { draftId });
   const { data: currentPickData } = useQuery(api.drafts.getCurrentPick, { draftId });
+  const { data: availablePlayers } = useQuery(api.drafts.getAvailablePlayers, { draftId });
+  const { data: recentPicks } = useQuery(api.drafts.getRecentPicks, { draftId, limit: 10 });
   const { mutate: finishDraft } = useMutation(api.drafts.finishDraft);
   const { mutate: advancePick } = useMutation(api.drafts.advancePick);
+  const { mutate: makePickMutation } = useMutation(api.drafts.makePick);
   const [timeRemaining, setTimeRemaining] = createSignal<number>(45);
   const [hasAdvanced, setHasAdvanced] = createSignal<boolean>(false);
+  const [isMakingPick, setIsMakingPick] = createSignal<boolean>(false);
 
   const currentUserId = () => session()?.data?.user?.id;
 
@@ -86,27 +90,35 @@ function DuringDraft() {
     }
   });
 
-  const availablePlayers = [
-    { id: "1", name: "Connor McDavid", position: "C", team: "EDM" },
-    { id: "2", name: "Auston Matthews", position: "C", team: "TOR" },
-    { id: "3", name: "Nathan MacKinnon", position: "C", team: "COL" },
-    { id: "4", name: "Cale Makar", position: "D", team: "COL" },
-    { id: "5", name: "Connor Hellebuyck", position: "G", team: "WPG" },
-  ];
+  const makePick = async () => {
+    const playerId = selectedPlayer();
+    if (!playerId) return;
 
-  const recentPicks = [
-    { team: "Lightning", player: "Leon Draisaitl", position: "C" },
-    { team: "Penguins", player: "David Pastrnak", position: "RW" },
-    { team: "Bruins", player: "Igor Shesterkin", position: "G" },
-    { team: "Maple Leafs", player: "Victor Hedman", position: "D" },
-  ];
-
-  const makePick = () => {
-    if (selectedPlayer()) {
-      console.log("Making pick:", selectedPlayer());
-      // TODO: Implement pick logic
+    setIsMakingPick(true);
+    try {
+      await makePickMutation({
+        draftId,
+        playerId,
+      });
       setSelectedPlayer(null);
+    } catch (err) {
+      console.error("Failed to make pick:", err);
+      alert(err instanceof Error ? err.message : "Failed to make pick");
+    } finally {
+      setIsMakingPick(false);
     }
+  };
+
+  // Filter players by search query
+  const filteredPlayers = () => {
+    const players = availablePlayers?.() || [];
+    const query = searchQuery().toLowerCase();
+    if (!query) return players;
+    return players.filter(
+      (player) =>
+        player.name.toLowerCase().includes(query) ||
+        player.position.toLowerCase().includes(query)
+    );
   };
 
   const handleFinishDraft = async () => {
@@ -230,41 +242,70 @@ function DuringDraft() {
 
                 {/* Players List */}
                 <div class="space-y-2 max-h-[600px] overflow-y-auto">
-                  <For each={availablePlayers}>
-                    {(player) => (
-                      <button
-                        onClick={() => setSelectedPlayer(player.id)}
-                        class={`w-full flex items-center justify-between p-4 rounded-lg border transition-all ${selectedPlayer() === player.id
-                          ? "bg-blue-600/20 border-blue-500"
-                          : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
-                          }`}
-                      >
-                        <div class="flex items-center gap-4">
-                          <div class="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold">
-                            {player.name.charAt(0)}
+                  <Show
+                    when={filteredPlayers().length > 0}
+                    fallback={
+                      <div class="text-center py-8 text-slate-400">
+                        <p>No available players found</p>
+                      </div>
+                    }
+                  >
+                    <For each={filteredPlayers()}>
+                      {(player) => (
+                        <button
+                          onClick={() => setSelectedPlayer(player._id)}
+                          disabled={isMakingPick()}
+                          class={`w-full flex items-center justify-between p-4 rounded-lg border transition-all ${
+                            selectedPlayer() === player._id
+                              ? "bg-blue-600/20 border-blue-500"
+                              : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
+                          } ${isMakingPick() ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <div class="flex items-center gap-4">
+                            {player.avatar ? (
+                              <img
+                                src={player.avatar}
+                                alt={player.name}
+                                class="w-12 h-12 rounded-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to initial if image fails to load
+                                  const target = e.currentTarget;
+                                  target.style.display = "none";
+                                  const fallback = target.nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = "flex";
+                                }}
+                              />
+                            ) : null}
+                            <div
+                              class={`w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold ${player.avatar ? "hidden" : ""}`}
+                            >
+                              {player.name.charAt(0)}
+                            </div>
+                            <div class="text-left">
+                              <p class="text-white font-semibold">{player.name}</p>
+                              <p class="text-slate-400 text-sm">{player.position}</p>
+                            </div>
                           </div>
-                          <div class="text-left">
-                            <p class="text-white font-semibold">{player.name}</p>
-                            <p class="text-slate-400 text-sm">
-                              {player.position} • {player.team}
-                            </p>
-                          </div>
-                        </div>
-                        {selectedPlayer() === player.id && (
-                          <span class="text-blue-400">✓</span>
-                        )}
-                      </button>
-                    )}
-                  </For>
+                          {selectedPlayer() === player._id && (
+                            <span class="text-blue-400">✓</span>
+                          )}
+                        </button>
+                      )}
+                    </For>
+                  </Show>
                 </div>
 
                 {/* Make Pick Button */}
                 <button
                   onClick={makePick}
-                  disabled={!selectedPlayer()}
+                  disabled={!selectedPlayer() || isMakingPick()}
                   class="w-full mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg"
                 >
-                  {selectedPlayer() ? "Confirm Pick" : "Select a Player"}
+                  {isMakingPick()
+                    ? "Making Pick..."
+                    : selectedPlayer()
+                      ? "Confirm Pick"
+                      : "Select a Player"}
                 </button>
               </div>
             </Show>
@@ -274,18 +315,34 @@ function DuringDraft() {
               {/* Recent Picks */}
               <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
                 <h3 class="text-xl font-bold text-white mb-4">Recent Picks</h3>
-                <div class="space-y-3">
-                  <For each={recentPicks}>
-                    {(pick) => (
-                      <div class="bg-slate-900/50 rounded-lg p-3 border border-slate-600">
-                        <p class="text-white font-semibold">{pick.player}</p>
-                        <p class="text-slate-400 text-sm">
-                          {pick.position} • {pick.team}
-                        </p>
-                      </div>
-                    )}
-                  </For>
-                </div>
+                <Show
+                  when={recentPicks?.() && recentPicks()!.length > 0}
+                  fallback={
+                    <div class="text-center py-4 text-slate-400 text-sm">
+                      No picks yet
+                    </div>
+                  }
+                >
+                  <div class="space-y-3">
+                    <For each={recentPicks?.() || []}>
+                      {(pick) => (
+                        <div class="bg-slate-900/50 rounded-lg p-3 border border-slate-600">
+                          <div class="flex items-center justify-between mb-1">
+                            <p class="text-white font-semibold">
+                              {pick.player?.name || "Unknown"}
+                            </p>
+                            <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                              #{pick.pickNumber}
+                            </span>
+                          </div>
+                          <p class="text-slate-400 text-sm">
+                            {pick.player?.position} • {pick.teamName}
+                          </p>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
               </div>
 
               {/* Quick Stats */}

@@ -430,6 +430,204 @@ export const getCurrentPick = query({
     },
 });
 
+// Get available players for a draft (players not yet picked)
+export const getAvailablePlayers = query({
+    args: {
+        draftId: v.id("drafts"),
+    },
+    handler: async (ctx, args) => {
+        // Get all draft teams for this draft
+        const teams = await ctx.db
+            .query("draftTeams")
+            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .collect();
+
+        // Get all picks for this draft (through teams)
+        const allPicks = await Promise.all(
+            teams.map(async (team) => {
+                const picks = await ctx.db
+                    .query("draftPicks")
+                    .withIndex("draftTeamId", (q) => q.eq("draftTeamId", team._id))
+                    .collect();
+                return picks;
+            })
+        );
+
+        const pickedPlayerIds = new Set(
+            allPicks.flat().map((pick) => pick.draftablePlayerId)
+        );
+
+        // Get all draftable players
+        const allPlayers = await ctx.db.query("draftablePlayers").collect();
+
+        // Filter out already picked players
+        const availablePlayers = allPlayers.filter(
+            (player) => !pickedPlayerIds.has(player._id)
+        );
+
+        // Sort by position, then name
+        availablePlayers.sort((a, b) => {
+            if (a.position !== b.position) {
+                const positionOrder = { C: 1, LW: 2, RW: 3, D: 4, G: 5 };
+                return (positionOrder[a.position as keyof typeof positionOrder] || 99) -
+                    (positionOrder[b.position as keyof typeof positionOrder] || 99);
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+        return availablePlayers;
+    },
+});
+
+// Get recent picks for a draft
+export const getRecentPicks = query({
+    args: {
+        draftId: v.id("drafts"),
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const limit = args.limit || 10;
+
+        // Get all draft teams for this draft
+        const teams = await ctx.db
+            .query("draftTeams")
+            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .collect();
+
+        // Get all picks for this draft
+        const allPicks = await Promise.all(
+            teams.map(async (team) => {
+                const picks = await ctx.db
+                    .query("draftPicks")
+                    .withIndex("draftTeamId", (q) => q.eq("draftTeamId", team._id))
+                    .collect();
+                return picks.map((pick) => ({
+                    ...pick,
+                    teamId: team._id,
+                    teamName: team.teamName,
+                }));
+            })
+        );
+
+        // Flatten and sort by pick number (most recent first)
+        const sortedPicks = allPicks
+            .flat()
+            .sort((a, b) => b.draftPickNum - a.draftPickNum)
+            .slice(0, limit);
+
+        // Get player details for each pick
+        const picksWithPlayers = await Promise.all(
+            sortedPicks.map(async (pick) => {
+                const player = await ctx.db.get(pick.draftablePlayerId);
+                return {
+                    pickNumber: pick.draftPickNum,
+                    teamName: pick.teamName,
+                    player: player
+                        ? {
+                            name: player.name,
+                            position: player.position,
+                            avatar: player.avatar,
+                        }
+                        : null,
+                };
+            })
+        );
+
+        return picksWithPlayers.filter((p) => p.player !== null);
+    },
+});
+
+// Make a pick (save pick and advance turn)
+export const makePick = mutation({
+    args: {
+        draftId: v.id("drafts"),
+        playerId: v.id("draftablePlayers"),
+    },
+    handler: async (ctx, args) => {
+        const authUser = await authComponent.getAuthUser(ctx);
+        if (!authUser || !authUser._id) {
+            throw new Error("User must be authenticated to make a pick");
+        }
+
+        const betterAuthUserId = authUser._id;
+
+        // Get the draft
+        const draft = await ctx.db.get(args.draftId);
+        if (!draft || draft.status !== "DURING") {
+            throw new Error("Draft is not in progress");
+        }
+
+        // Get current pick info to verify it's the user's turn
+        const teams = await ctx.db
+            .query("draftTeams")
+            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .collect();
+
+        teams.sort((a, b) => a.draftOrderNumber - b.draftOrderNumber);
+
+        const numTeams = teams.length;
+        const pickNumber = draft.currentDraftPickNumber;
+
+        // Calculate which team is on the clock (snake draft)
+        const round = Math.ceil(pickNumber / numTeams);
+        let teamIndex: number;
+
+        if (round % 2 === 1) {
+            teamIndex = ((pickNumber - 1) % numTeams);
+        } else {
+            teamIndex = numTeams - 1 - ((pickNumber - 1) % numTeams);
+        }
+
+        const currentTeam = teams[teamIndex];
+
+        // Verify it's the user's turn
+        if (currentTeam.betterAuthUserId !== betterAuthUserId) {
+            throw new Error("It's not your turn to pick");
+        }
+
+        // Check if player is already picked
+        const existingPicks = await ctx.db
+            .query("draftPicks")
+            .withIndex("draftablePlayerId", (q) => q.eq("draftablePlayerId", args.playerId))
+            .collect();
+
+        // Check if this player was picked by any team in this draft
+        const teamIds = new Set(teams.map((t) => t._id));
+        const alreadyPicked = existingPicks.some((pick) => teamIds.has(pick.draftTeamId));
+
+        if (alreadyPicked) {
+            throw new Error("This player has already been picked");
+        }
+
+        // Save the pick
+        await ctx.db.insert("draftPicks", {
+            draftablePlayerId: args.playerId,
+            draftTeamId: currentTeam._id,
+            draftPickNum: pickNumber,
+        });
+
+        // Advance to next pick
+        const maxPicks = numTeams * 10; // Assuming 10 rounds
+        const nextPickNumber = pickNumber + 1;
+        const now = Date.now();
+
+        if (nextPickNumber > maxPicks) {
+            // Draft is complete
+            await ctx.db.patch(args.draftId, {
+                status: "POST",
+            });
+        } else {
+            // Advance to next pick
+            await ctx.db.patch(args.draftId, {
+                currentDraftPickNumber: nextPickNumber,
+                currentPickStartTime: now,
+            });
+        }
+
+        return { success: true };
+    },
+});
+
 // Advance to the next pick (called automatically after 45 seconds or manually)
 export const advancePick = mutation({
     args: {

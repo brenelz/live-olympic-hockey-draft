@@ -532,6 +532,74 @@ export const getDraftStats = query({
     },
 });
 
+// Get all teams with their rosters for post-draft view
+export const getDraftRosters = query({
+    args: {
+        draftId: v.id("drafts"),
+    },
+    handler: async (ctx, args) => {
+        // Get all teams for this draft
+        const teams = await ctx.db
+            .query("draftTeams")
+            .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+            .collect();
+
+        teams.sort((a, b) => a.draftOrderNumber - b.draftOrderNumber);
+
+        // Get rosters for each team
+        const teamsWithRosters = await Promise.all(
+            teams.map(async (team) => {
+                const picks = await ctx.db
+                    .query("draftPicks")
+                    .withIndex("draftTeamId", (q) => q.eq("draftTeamId", team._id))
+                    .collect();
+
+                // Sort picks by pick number
+                picks.sort((a, b) => a.draftPickNum - b.draftPickNum);
+
+                // Get player details and organize by position
+                const players = await Promise.all(
+                    picks.map(async (pick) => {
+                        const player = await ctx.db.get(pick.draftablePlayerId);
+                        if (!player) return null;
+                        return {
+                            name: player.name,
+                            position: player.position,
+                            avatar: player.avatar,
+                            pickNum: pick.draftPickNum,
+                        };
+                    })
+                );
+
+                const validPlayers = players.filter((p) => p !== null) as Array<{
+                    name: string;
+                    position: string;
+                    avatar: string;
+                    pickNum: number;
+                }>;
+
+                // Organize by position
+                const forwards = validPlayers.filter(
+                    (p) => p.position === "C" || p.position === "LW" || p.position === "RW"
+                );
+                const defense = validPlayers.filter((p) => p.position === "D");
+                const goalies = validPlayers.filter((p) => p.position === "G");
+
+                return {
+                    teamId: team._id,
+                    teamName: team.teamName,
+                    draftOrderNumber: team.draftOrderNumber,
+                    forwards,
+                    defense,
+                    goalies,
+                };
+            })
+        );
+
+        return teamsWithRosters;
+    },
+});
+
 // Get recent picks for a draft
 export const getRecentPicks = query({
     args: {

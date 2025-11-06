@@ -1,5 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/solid-router";
-import { For, createSignal } from "solid-js";
+import { For, createSignal, Show, createMemo } from "solid-js";
+import { useQuery } from "convex-solidjs";
+import { api } from "convex/_generated/api";
+import type { Id } from "convex/_generated/dataModel";
 import { Header } from "~/components/header";
 
 export const Route = createFileRoute("/_authed/draft/$id/post")({
@@ -9,45 +12,58 @@ export const Route = createFileRoute("/_authed/draft/$id/post")({
 function PostDraft() {
   const params = Route.useParams();
   const navigate = useNavigate();
-  const [selectedTeam, setSelectedTeam] = createSignal<string | null>("team-1");
+  const draftId = params().id as Id<"drafts">;
 
-  // Dummy data
-  const draftInfo = {
-    name: "2026 Olympics Draft",
-    completedAt: "Feb 15, 2025 at 9:30 PM",
-    duration: "2h 30m",
-    totalPicks: 80,
+  const { data: draft } = useQuery(api.drafts.getDraftById, { draftId });
+  const { data: teamsWithRosters } = useQuery(api.drafts.getDraftRosters, { draftId });
+  const { data: draftStats } = useQuery(api.drafts.getDraftStats, { draftId });
+
+  const [selectedTeamId, setSelectedTeamId] = createSignal<Id<"draftTeams"> | null>(null);
+
+  // Set first team as selected by default
+  createMemo(() => {
+    const teams = teamsWithRosters?.();
+    if (teams && teams.length > 0 && !selectedTeamId()) {
+      setSelectedTeamId(teams[0].teamId);
+    }
+  });
+
+  const selectedTeam = createMemo(() => {
+    const teams = teamsWithRosters?.();
+    if (!teams) return null;
+    return teams.find((t) => t.teamId === selectedTeamId()) || teams[0] || null;
+  });
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
-  const teams = [
-    { id: "team-1", name: "Maple Leafs", owner: "John Doe" },
-    { id: "team-2", name: "Bruins", owner: "Jane Smith" },
-    { id: "team-3", name: "Penguins", owner: "Bob Johnson" },
-    { id: "team-4", name: "Lightning", owner: "Alice Williams" },
-    { id: "team-5", name: "Avalanche", owner: "Charlie Brown" },
-  ];
-
-  const teamRoster = {
-    "team-1": {
-      forwards: [
-        { name: "Connor McDavid", position: "C", pickNum: 1 },
-        { name: "David Pastrnak", position: "RW", pickNum: 12 },
-        { name: "Brad Marchand", position: "LW", pickNum: 23 },
-        { name: "Mitch Marner", position: "RW", pickNum: 34 },
-      ],
-      defense: [
-        { name: "Cale Makar", position: "D", pickNum: 8 },
-        { name: "Adam Fox", position: "D", pickNum: 17 },
-        { name: "Charlie McAvoy", position: "D", pickNum: 28 },
-      ],
-      goalies: [
-        { name: "Igor Shesterkin", position: "G", pickNum: 45 },
-        { name: "Jeremy Swayman", position: "G", pickNum: 56 },
-      ],
-    },
+  const calculateDuration = () => {
+    if (!draft?.()) return "N/A";
+    // Use startDatetime as the draft start time
+    const startTime = draft()!.startDatetime;
+    // For completed drafts, estimate duration based on picks made
+    // In a real scenario, you'd store an endTime when the draft finishes
+    const stats = draftStats?.();
+    if (stats && stats.totalPicks > 0) {
+      // Estimate: assume average 45 seconds per pick
+      const estimatedSeconds = stats.totalPicks * 45;
+      const hours = Math.floor(estimatedSeconds / 3600);
+      const minutes = Math.floor((estimatedSeconds % 3600) / 60);
+      if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+      }
+      return `${minutes}m`;
+    }
+    return "N/A";
   };
-
-  const currentRoster = () => teamRoster[selectedTeam() as keyof typeof teamRoster] || { forwards: [], defense: [], goalies: [] };
 
   return (
     <div class="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-800">
@@ -55,142 +71,202 @@ function PostDraft() {
       <div class="p-6">
         <div class="max-w-7xl mx-auto">
           {/* Header */}
-          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
-            <div class="flex items-start justify-between mb-4">
-              <div>
-                <h1 class="text-4xl font-bold text-white mb-2">
-                  {draftInfo.name}
-                </h1>
-                <div class="flex items-center gap-4 text-slate-300">
-                  <span>✓ Completed {draftInfo.completedAt}</span>
-                  <span>•</span>
-                  <span>Duration: {draftInfo.duration}</span>
+          <Show when={draft?.()}>
+            {(draftData) => (
+              <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
+                <div class="flex items-start justify-between mb-4">
+                  <div>
+                    <h1 class="text-4xl font-bold text-white mb-2">
+                      {draftData().name}
+                    </h1>
+                    <div class="flex items-center gap-4 text-slate-300">
+                      <span>✓ Completed {formatDate(draftData()._creationTime)}</span>
+                      <span>•</span>
+                      <span>Duration: {calculateDuration()}</span>
+                    </div>
+                  </div>
+                  <span class="px-4 py-2 bg-green-600/20 text-green-300 rounded-lg font-medium border border-green-600/30">
+                    Complete
+                  </span>
                 </div>
-              </div>
-              <span class="px-4 py-2 bg-green-600/20 text-green-300 rounded-lg font-medium border border-green-600/30">
-                Complete
-              </span>
-            </div>
 
-            {/* Summary Stats */}
-            <div class="grid grid-cols-4 gap-4 mt-6">
-              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                <p class="text-slate-400 text-sm mb-1">Total Picks</p>
-                <p class="text-2xl font-bold text-white">{draftInfo.totalPicks}</p>
-              </div>
-              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                <p class="text-slate-400 text-sm mb-1">Teams</p>
-                <p class="text-2xl font-bold text-white">{teams.length}</p>
-              </div>
-              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                <p class="text-slate-400 text-sm mb-1">Rounds</p>
-                <p class="text-2xl font-bold text-white">10</p>
-              </div>
-              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                <p class="text-slate-400 text-sm mb-1">Avg Pick Time</p>
-                <p class="text-2xl font-bold text-white">1:52</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Team Selector */}
-            <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
-              <h2 class="text-xl font-bold text-white mb-4">Teams</h2>
-              <div class="space-y-2">
-                <For each={teams}>
-                  {(team) => (
-                    <button
-                      onClick={() => setSelectedTeam(team.id)}
-                      class={`w-full text-left p-4 rounded-lg border transition-all ${selectedTeam() === team.id
-                        ? "bg-indigo-600/20 border-indigo-500"
-                        : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
-                        }`}
-                    >
-                      <p class="text-white font-semibold">{team.name}</p>
-                      <p class="text-slate-400 text-sm">{team.owner}</p>
-                    </button>
+                {/* Summary Stats */}
+                <Show when={draftStats?.()}>
+                  {(stats) => (
+                    <div class="grid grid-cols-4 gap-4 mt-6">
+                      <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                        <p class="text-slate-400 text-sm mb-1">Total Picks</p>
+                        <p class="text-2xl font-bold text-white">{stats().totalPicks}</p>
+                      </div>
+                      <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                        <p class="text-slate-400 text-sm mb-1">Teams</p>
+                        <p class="text-2xl font-bold text-white">
+                          {teamsWithRosters?.()?.length || 0}
+                        </p>
+                      </div>
+                      <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                        <p class="text-slate-400 text-sm mb-1">Rounds</p>
+                        <p class="text-2xl font-bold text-white">
+                          {Math.ceil(stats().maxPicks / (teamsWithRosters?.()?.length || 1))}
+                        </p>
+                      </div>
+                      <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                        <p class="text-slate-400 text-sm mb-1">Avg Pick Time</p>
+                        <p class="text-2xl font-bold text-white">
+                          {stats().totalPicks > 0
+                            ? Math.floor((45 * stats().totalPicks) / 60)
+                            : 0}
+                          :{String((45 * stats().totalPicks) % 60).padStart(2, "0")}
+                        </p>
+                      </div>
+                    </div>
                   )}
-                </For>
+                </Show>
               </div>
+            )}
+          </Show>
+
+          <Show
+            when={teamsWithRosters?.() && teamsWithRosters()!.length > 0}
+            fallback={
+              <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 text-center">
+                <p class="text-slate-400">Loading teams...</p>
+              </div>
+            }
+          >
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Team Selector */}
+              <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
+                <h2 class="text-xl font-bold text-white mb-4">Teams</h2>
+                <div class="space-y-2">
+                  <For each={teamsWithRosters?.() || []}>
+                    {(team) => (
+                      <button
+                        onClick={() => setSelectedTeamId(team.teamId)}
+                        class={`w-full text-left p-4 rounded-lg border transition-all ${selectedTeamId() === team.teamId
+                          ? "bg-indigo-600/20 border-indigo-500"
+                          : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
+                          }`}
+                      >
+                        <p class="text-white font-semibold">{team.teamName}</p>
+                        <p class="text-slate-400 text-sm">
+                          Pick #{team.draftOrderNumber}
+                        </p>
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </div>
+
+              {/* Roster View */}
+              <Show
+                when={selectedTeam()}
+                fallback={
+                  <div class="lg:col-span-3 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
+                    <p class="text-slate-400">Select a team to view roster</p>
+                  </div>
+                }
+              >
+                {(team) => (
+                  <div class="lg:col-span-3 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-6">
+                      {team().teamName} Roster
+                    </h2>
+
+                    {/* Forwards */}
+                    <div class="mb-6">
+                      <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Forwards ({team().forwards.length})
+                      </h3>
+                      <Show
+                        when={team().forwards.length > 0}
+                        fallback={
+                          <p class="text-slate-400 text-sm">No forwards selected</p>
+                        }
+                      >
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <For each={team().forwards}>
+                            {(player) => (
+                              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                                <div class="flex justify-between items-start mb-1">
+                                  <p class="text-white font-semibold">{player.name}</p>
+                                  <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                                    #{player.pickNum}
+                                  </span>
+                                </div>
+                                <p class="text-slate-400 text-sm">{player.position}</p>
+                              </div>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </div>
+
+                    {/* Defense */}
+                    <div class="mb-6">
+                      <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        Defense ({team().defense.length})
+                      </h3>
+                      <Show
+                        when={team().defense.length > 0}
+                        fallback={
+                          <p class="text-slate-400 text-sm">No defensemen selected</p>
+                        }
+                      >
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <For each={team().defense}>
+                            {(player) => (
+                              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                                <div class="flex justify-between items-start mb-1">
+                                  <p class="text-white font-semibold">{player.name}</p>
+                                  <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                                    #{player.pickNum}
+                                  </span>
+                                </div>
+                                <p class="text-slate-400 text-sm">{player.position}</p>
+                              </div>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </div>
+
+                    {/* Goalies */}
+                    <div>
+                      <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
+                        Goalies ({team().goalies.length})
+                      </h3>
+                      <Show
+                        when={team().goalies.length > 0}
+                        fallback={
+                          <p class="text-slate-400 text-sm">No goalies selected</p>
+                        }
+                      >
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <For each={team().goalies}>
+                            {(player) => (
+                              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                                <div class="flex justify-between items-start mb-1">
+                                  <p class="text-white font-semibold">{player.name}</p>
+                                  <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                                    #{player.pickNum}
+                                  </span>
+                                </div>
+                                <p class="text-slate-400 text-sm">{player.position}</p>
+                              </div>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+                )}
+              </Show>
             </div>
-
-            {/* Roster View */}
-            <div class="lg:col-span-3 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
-              <h2 class="text-2xl font-bold text-white mb-6">
-                {teams.find((t) => t.id === selectedTeam())?.name} Roster
-              </h2>
-
-              {/* Forwards */}
-              <div class="mb-6">
-                <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  Forwards ({currentRoster().forwards.length})
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <For each={currentRoster().forwards}>
-                    {(player) => (
-                      <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                        <div class="flex justify-between items-start mb-1">
-                          <p class="text-white font-semibold">{player.name}</p>
-                          <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                            #{player.pickNum}
-                          </span>
-                        </div>
-                        <p class="text-slate-400 text-sm">{player.position}</p>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </div>
-
-              {/* Defense */}
-              <div class="mb-6">
-                <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                  Defense ({currentRoster().defense.length})
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <For each={currentRoster().defense}>
-                    {(player) => (
-                      <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                        <div class="flex justify-between items-start mb-1">
-                          <p class="text-white font-semibold">{player.name}</p>
-                          <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                            #{player.pickNum}
-                          </span>
-                        </div>
-                        <p class="text-slate-400 text-sm">{player.position}</p>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </div>
-
-              {/* Goalies */}
-              <div>
-                <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
-                  Goalies ({currentRoster().goalies.length})
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <For each={currentRoster().goalies}>
-                    {(player) => (
-                      <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                        <div class="flex justify-between items-start mb-1">
-                          <p class="text-white font-semibold">{player.name}</p>
-                          <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                            #{player.pickNum}
-                          </span>
-                        </div>
-                        <p class="text-slate-400 text-sm">{player.position}</p>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </div>
-            </div>
-          </div>
+          </Show>
 
           {/* Action Buttons */}
           <div class="mt-6 flex gap-4">

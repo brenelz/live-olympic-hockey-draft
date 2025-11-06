@@ -5,22 +5,22 @@ export default defineSchema({
     drafts: defineTable({
         name: v.string(),
         startDatetime: v.number(), // Unix timestamp in milliseconds
-        hostUserId: v.id("users"),
+        hostBetterAuthUserId: v.string(),
         status: v.union(
             v.literal("PRE"),
             v.literal("DURING"),
             v.literal("POST")
         ),
-    }).index("hostUserId", ["hostUserId"]),
+    }).index("hostBetterAuthUserId", ["hostBetterAuthUserId"]),
 
     draftTeams: defineTable({
-        userId: v.id("users"),
+        betterAuthUserId: v.string(),
         draftId: v.id("drafts"),
         teamName: v.string(),
         draftOrderNumber: v.number(),
     })
         .index("draftId", ["draftId"])
-        .index("userId", ["userId"]),
+        .index("betterAuthUserId", ["betterAuthUserId"]),
 
     draftablePlayers: defineTable({
         name: v.string(),
@@ -36,20 +36,9 @@ export default defineSchema({
         .index("draftTeamId", ["draftTeamId"])
         .index("draftablePlayerId", ["draftablePlayerId"]),
 
-    users: defineTable({
-        name: v.string(),
-        email: v.optional(v.string()),
-        avatar: v.optional(v.string()), // URL to avatar image
-        lastLoggedIn: v.optional(v.number()), // Unix timestamp in milliseconds
-        active: v.optional(v.boolean()), // Whether the user account is active
-        betterAuthUserId: v.optional(v.string()), // Link to Better Auth user ID
-    })
-        .index("email", ["email"])
-        .index("betterAuthUserId", ["betterAuthUserId"]),
-
     todos: defineTable({
-        userId: v.id("users"),
+        betterAuthUserId: v.string(),
         text: v.string(),
         isCompleted: v.boolean(),
-    }).index("userId", ["userId"]),
+    }).index("betterAuthUserId", ["betterAuthUserId"]),
 });

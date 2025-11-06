@@ -16,37 +16,17 @@ export const create = mutation({
 
         const betterAuthUserId = authUser._id;
 
-        // Find or create the user in the users table
-        let user = await ctx.db
-            .query("users")
-            .withIndex("betterAuthUserId", (q) => q.eq("betterAuthUserId", betterAuthUserId))
-            .first();
-
-        if (!user) {
-            // Create user if they don't exist
-            const userId = await ctx.db.insert("users", {
-                name: authUser.name || "Unknown",
-                email: authUser.email,
-                betterAuthUserId: betterAuthUserId,
-            });
-            user = await ctx.db.get(userId);
-        }
-
-        if (!user) {
-            throw new Error("Failed to create or find user");
-        }
-
         // Create the draft
         const draftId = await ctx.db.insert("drafts", {
             name: args.name,
             startDatetime: args.startDatetime,
-            hostUserId: user._id,
+            hostBetterAuthUserId: betterAuthUserId,
             status: "PRE",
         });
 
         // Create a draft team for the host
         await ctx.db.insert("draftTeams", {
-            userId: user._id,
+            betterAuthUserId: betterAuthUserId,
             draftId,
             teamName: `${authUser.name || "Host"}'s Team`,
             draftOrderNumber: 1, // Host gets first pick by default
@@ -100,21 +80,11 @@ export const isUserInDraft = query({
 
         const betterAuthUserId = authUser._id;
 
-        // Find the user in the users table
-        const user = await ctx.db
-            .query("users")
-            .withIndex("betterAuthUserId", (q) => q.eq("betterAuthUserId", betterAuthUserId))
-            .first();
-
-        if (!user) {
-            return false;
-        }
-
         // Check if user already has a team in this draft
         const existingTeam = await ctx.db
             .query("draftTeams")
             .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
-            .filter((q) => q.eq(q.field("userId"), user._id))
+            .filter((q) => q.eq(q.field("betterAuthUserId"), betterAuthUserId))
             .first();
 
         return !!existingTeam;
@@ -135,26 +105,6 @@ export const joinDraft = mutation({
 
         const betterAuthUserId = authUser._id;
 
-        // Find or create the user in the users table
-        let user = await ctx.db
-            .query("users")
-            .withIndex("betterAuthUserId", (q) => q.eq("betterAuthUserId", betterAuthUserId))
-            .first();
-
-        if (!user) {
-            // Create user if they don't exist
-            const userId = await ctx.db.insert("users", {
-                name: authUser.name || "Unknown",
-                email: authUser.email,
-                betterAuthUserId: betterAuthUserId,
-            });
-            user = await ctx.db.get(userId);
-        }
-
-        if (!user) {
-            throw new Error("Failed to create or find user");
-        }
-
         // Check if draft exists
         const draft = await ctx.db.get(args.draftId);
         if (!draft) {
@@ -165,7 +115,7 @@ export const joinDraft = mutation({
         const existingTeam = await ctx.db
             .query("draftTeams")
             .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
-            .filter((q) => q.eq(q.field("userId"), user._id))
+            .filter((q) => q.eq(q.field("betterAuthUserId"), betterAuthUserId))
             .first();
 
         if (existingTeam) {
@@ -182,7 +132,7 @@ export const joinDraft = mutation({
 
         // Create draft team for the user
         const teamId = await ctx.db.insert("draftTeams", {
-            userId: user._id,
+            betterAuthUserId: betterAuthUserId,
             draftId: args.draftId,
             teamName: args.teamName,
             draftOrderNumber,
@@ -203,26 +153,16 @@ export const getUserDrafts = query({
 
         const betterAuthUserId = authUser._id;
 
-        // Find the user in the users table
-        const user = await ctx.db
-            .query("users")
-            .withIndex("betterAuthUserId", (q) => q.eq("betterAuthUserId", betterAuthUserId))
-            .first();
-
-        if (!user) {
-            return [];
-        }
-
         // Get drafts where the user is the host
         const hostedDrafts = await ctx.db
             .query("drafts")
-            .withIndex("hostUserId", (q) => q.eq("hostUserId", user._id))
+            .withIndex("hostBetterAuthUserId", (q) => q.eq("hostBetterAuthUserId", betterAuthUserId))
             .collect();
 
         // Get drafts where the user is a participant
         const draftTeams = await ctx.db
             .query("draftTeams")
-            .withIndex("userId", (q) => q.eq("userId", user._id))
+            .withIndex("betterAuthUserId", (q) => q.eq("betterAuthUserId", betterAuthUserId))
             .collect();
 
         const participatingDrafts = await Promise.all(
@@ -235,7 +175,27 @@ export const getUserDrafts = query({
             new Map(allDrafts.map((draft) => [draft!._id, draft])).values()
         );
 
-        return uniqueDrafts;
+        // Add team counts and user's team info to each draft
+        const draftsWithDetails = await Promise.all(
+            uniqueDrafts.map(async (draft) => {
+                if (!draft) return null;
+
+                const teams = await ctx.db
+                    .query("draftTeams")
+                    .withIndex("draftId", (q) => q.eq("draftId", draft._id))
+                    .collect();
+
+                const userTeam = teams.find((team) => team.betterAuthUserId === betterAuthUserId);
+
+                return {
+                    ...draft,
+                    teamCount: teams.length,
+                    userTeamName: userTeam?.teamName,
+                };
+            })
+        );
+
+        return draftsWithDetails.filter(Boolean);
     },
 });
 

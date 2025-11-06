@@ -21,6 +21,7 @@ function Dashboard() {
   const { mutate: createTodo } = useMutation(api.todos.create);
   const { mutate: toggleTodo } = useMutation(api.todos.toggle);
   const { mutate: removeTodo } = useMutation(api.todos.remove);
+  const { data: drafts } = useQuery(api.drafts.getUserDrafts, {});
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -135,28 +136,32 @@ function Dashboard() {
           <div class="grid md:grid-cols-3 gap-6">
             <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-slate-900">Active Drafts</h3>
-                <div class="p-2 bg-blue-100 rounded-lg">
-                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <h3 class="text-lg font-semibold text-slate-900">Pre-Draft</h3>
+                <div class="p-2 bg-yellow-100 rounded-lg">
+                  <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <p class="text-3xl font-bold text-slate-900">0</p>
-              <p class="text-sm text-slate-600 mt-2">No active drafts</p>
+              <p class="text-3xl font-bold text-slate-900">{drafts?.()?.filter(d => d.status === "PRE").length ?? 0}</p>
+              <p class="text-sm text-slate-600 mt-2">
+                {(drafts?.()?.filter(d => d.status === "PRE").length ?? 0) === 0 ? "No upcoming drafts" : "Waiting to start"}
+              </p>
             </div>
 
             <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-slate-900">Your Teams</h3>
-                <div class="p-2 bg-purple-100 rounded-lg">
-                  <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                <h3 class="text-lg font-semibold text-slate-900">Live Drafts</h3>
+                <div class="p-2 bg-red-100 rounded-lg">
+                  <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
               </div>
-              <p class="text-3xl font-bold text-slate-900">0</p>
-              <p class="text-sm text-slate-600 mt-2">No teams yet</p>
+              <p class="text-3xl font-bold text-slate-900">{drafts?.()?.filter(d => d.status === "DURING").length ?? 0}</p>
+              <p class="text-sm text-slate-600 mt-2">
+                {(drafts?.()?.filter(d => d.status === "DURING").length ?? 0) === 0 ? "No active drafts" : "In progress"}
+              </p>
             </div>
 
             <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
@@ -168,8 +173,10 @@ function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <p class="text-3xl font-bold text-slate-900">0</p>
-              <p class="text-sm text-slate-600 mt-2">No completed drafts</p>
+              <p class="text-3xl font-bold text-slate-900">{drafts?.()?.filter(d => d.status === "POST").length ?? 0}</p>
+              <p class="text-sm text-slate-600 mt-2">
+                {(drafts?.()?.filter(d => d.status === "POST").length ?? 0) === 0 ? "No completed drafts" : "Finished"}
+              </p>
             </div>
           </div>
 
@@ -282,74 +289,113 @@ function Dashboard() {
           <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
             <h3 class="text-2xl font-bold text-slate-900 mb-6">Your Drafts</h3>
 
-            {/* Demo Drafts - Replace with real data later */}
-            <div class="space-y-4">
-              {/* Pre-Draft Example */}
-              <Link to="/draft/$id/pre" params={{ id: "draft-123" }}>
-                <div class="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border-2 border-yellow-200 hover:border-yellow-300 transition-all cursor-pointer hover:shadow-md">
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <span class="px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">PRE-DRAFT</span>
-                      <h4 class="text-lg font-bold text-slate-900">2026 Olympics Draft</h4>
-                    </div>
-                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                  <div class="flex items-center gap-4 text-sm text-slate-600">
-                    <span>📅 Feb 15, 2025 at 7:00 PM</span>
-                    <span>•</span>
-                    <span>👤 5/8 teams joined</span>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Live Draft Example */}
-              <Link to="/draft/$id/during" params={{ id: "draft-456" }}>
-                <div class="p-6 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border-2 border-red-200 hover:border-red-300 transition-all cursor-pointer hover:shadow-md">
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <span class="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">LIVE</span>
-                      <h4 class="text-lg font-bold text-slate-900">Summer League Draft</h4>
-                    </div>
-                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                  <div class="flex items-center gap-4 text-sm text-slate-600">
-                    <span>🎯 Round 3 • Pick #18</span>
-                    <span>•</span>
-                    <span>⏱️ Your pick in 2 turns</span>
+            <Show
+              when={drafts?.() && (drafts()?.length ?? 0) > 0}
+              fallback={
+                <div class="text-center py-12 text-slate-500">
+                  <svg class="w-20 h-20 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <p class="text-xl font-medium mb-2">No drafts yet</p>
+                  <p class="text-sm mb-6">Create a new draft or join an existing one to get started!</p>
+                  <div class="flex justify-center gap-3">
+                    <Link to="/draft/create">
+                      <Button class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+                        Create New Draft
+                      </Button>
+                    </Link>
+                    <Link to="/draft/join" search={{ id: "" }}>
+                      <Button variant="outline">
+                        Join Draft
+                      </Button>
+                    </Link>
                   </div>
                 </div>
-              </Link>
+              }
+            >
+              <div class="space-y-4">
+                <For each={drafts?.() || []}>
+                  {(draft) => {
+                    const statusConfig = () => {
+                      switch (draft.status) {
+                        case "PRE":
+                          return {
+                            route: "/draft/$id/pre" as const,
+                            bgClass: "from-yellow-50 to-orange-50",
+                            borderClass: "border-yellow-200 hover:border-yellow-300",
+                            badgeClass: "bg-yellow-500",
+                            badgeText: "PRE-DRAFT",
+                          };
+                        case "DURING":
+                          return {
+                            route: "/draft/$id/during" as const,
+                            bgClass: "from-red-50 to-pink-50",
+                            borderClass: "border-red-200 hover:border-red-300",
+                            badgeClass: "bg-red-500 animate-pulse",
+                            badgeText: "LIVE",
+                          };
+                        case "POST":
+                          return {
+                            route: "/draft/$id/post" as const,
+                            bgClass: "from-green-50 to-emerald-50",
+                            borderClass: "border-green-200 hover:border-green-300",
+                            badgeClass: "bg-green-500",
+                            badgeText: "COMPLETE",
+                          };
+                        default:
+                          return {
+                            route: "/draft/$id/pre" as const,
+                            bgClass: "from-slate-50 to-slate-100",
+                            borderClass: "border-slate-200 hover:border-slate-300",
+                            badgeClass: "bg-slate-500",
+                            badgeText: "UNKNOWN",
+                          };
+                      }
+                    };
 
-              {/* Completed Draft Example */}
-              <Link to="/draft/$id/post" params={{ id: "draft-789" }}>
-                <div class="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 hover:border-green-300 transition-all cursor-pointer hover:shadow-md">
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <span class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">COMPLETE</span>
-                      <h4 class="text-lg font-bold text-slate-900">Winter Classic Draft</h4>
-                    </div>
-                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                  <div class="flex items-center gap-4 text-sm text-slate-600">
-                    <span>✓ Completed Jan 28, 2025</span>
-                    <span>•</span>
-                    <span>🏆 Your team: Maple Leafs</span>
-                  </div>
-                </div>
-              </Link>
-            </div>
+                    const formatDate = (timestamp: number) => {
+                      const date = new Date(timestamp);
+                      return date.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      });
+                    };
 
-            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p class="text-sm text-blue-800">
-                💡 <strong>Demo Mode:</strong> These are example drafts. Real draft data will appear here once you create or join a draft.
-              </p>
-            </div>
+                    return (
+                      <Link to={statusConfig().route} params={{ id: draft._id }}>
+                        <div class={`p-6 bg-gradient-to-r ${statusConfig().bgClass} rounded-xl border-2 ${statusConfig().borderClass} transition-all cursor-pointer hover:shadow-md`}>
+                          <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                              <span class={`px-3 py-1 ${statusConfig().badgeClass} text-white text-xs font-bold rounded-full`}>
+                                {statusConfig().badgeText}
+                              </span>
+                              <h4 class="text-lg font-bold text-slate-900">{draft.name}</h4>
+                            </div>
+                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                          <div class="flex items-center gap-4 text-sm text-slate-600">
+                            <span>📅 {formatDate(draft.startDatetime)}</span>
+                            <span>•</span>
+                            <span>👥 {draft.teamCount} {draft.teamCount === 1 ? "team" : "teams"}</span>
+                            {draft.userTeamName && (
+                              <>
+                                <span>•</span>
+                                <span>🏆 {draft.userTeamName}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  }}
+                </For>
+              </div>
+            </Show>
           </div>
         </div>
       </main>

@@ -1,12 +1,12 @@
-import { Link, useNavigate } from "@tanstack/solid-router";
+import { Link, useNavigate, useRouteContext } from "@tanstack/solid-router";
 import { authClient } from "~/lib/auth-client";
 import { Button } from "~/components/ui/button";
 import { createSignal, Show } from "solid-js";
 
 export function Header() {
   const navigate = useNavigate();
-  const session = authClient.useSession();
   const [isSigningOut, setIsSigningOut] = createSignal(false);
+  const context = useRouteContext({ from: "/_authed/dashboard" });
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -54,29 +54,26 @@ export function Header() {
               Live Olympic Hockey Draft
             </h1>
           </Link>
-          <Show when={session()?.data?.user}>
+          <Show when={context().user}>
             <div class="flex items-center gap-4">
               <div class="text-right hidden sm:block">
                 <p class="text-sm font-medium text-white">
-                  {session()?.data?.user?.name}
+                  {context().user.name}
                 </p>
-                <p class="text-xs text-slate-300">
-                  {session()?.data?.user?.email}
-                </p>
+                <p class="text-xs text-slate-300">{context().user.email}</p>
               </div>
               {/* User Avatar */}
               <div class="relative">
-                {session()?.data?.user?.image ? (
+                {context().user.image ? (
                   <img
-                    src={session()?.data?.user?.image ?? ""}
-                    alt={session()?.data?.user?.name ?? "User"}
+                    src={context().user.image ?? ""}
+                    alt={context().user.name ?? "User"}
                     class="w-10 h-10 rounded-full border-2 border-white/30 bg-slate-700 object-cover"
                   />
                 ) : (
                   <div class="w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                     <span class="text-white font-semibold text-sm">
-                      {session()?.data?.user?.name?.charAt(0).toUpperCase() ||
-                        "U"}
+                      {context().user.name?.charAt(0).toUpperCase() || "U"}
                     </span>
                   </div>
                 )}

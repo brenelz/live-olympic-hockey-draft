@@ -10,7 +10,7 @@ import { HydrationScript } from "solid-js/web";
 import { Suspense } from "solid-js";
 import styleCss from "../styles.css?url";
 
-import { fetchAuth } from "~/lib/auth.ts";
+import { fetchAuth, fetchUser } from "~/lib/server.ts";
 
 export const Route = createRootRouteWithContext()({
   head: () => ({

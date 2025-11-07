@@ -1,20 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { For, Show } from "solid-js";
-import { authClient } from "~/lib/auth-client";
 import { Button } from "~/components/ui/button";
-import { useQuery } from "convex-solidjs";
-import { api } from "../../../convex/_generated/api";
 import { Header } from "~/components/header";
+import { fetchUserDrafts } from "~/lib/server";
 
 export const Route = createFileRoute("/_authed/dashboard")({
   component: Dashboard,
+  loader: async () => {
+    const drafts = await fetchUserDrafts();
+    return { drafts };
+  },
 });
 
 function Dashboard() {
-  const session = authClient.useSession();
-
-  // Convex queries and mutations
-  const { data: drafts } = useQuery(api.drafts.getUserDrafts, {});
+  const context = Route.useRouteContext();
+  const loaderData = Route.useLoaderData();
 
   return (
     <div class="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-800">
@@ -42,7 +42,7 @@ function Dashboard() {
                 </div>
                 <div>
                   <h2 class="text-3xl font-bold text-white">
-                    Welcome back, {session().data?.user?.name}!
+                    Welcome back, {context().user.name}!
                   </h2>
                   <p class="text-slate-300 mt-1">
                     Ready to start your Olympic Hockey Draft?
@@ -73,11 +73,12 @@ function Dashboard() {
                   </div>
                 </div>
                 <p class="text-3xl font-bold text-white">
-                  {drafts?.()?.filter((d) => d?.status === "PRE").length ?? 0}
+                  {loaderData().drafts.filter((d) => d?.status === "PRE")
+                    .length ?? 0}
                 </p>
                 <p class="text-sm text-slate-300 mt-2">
-                  {(drafts?.()?.filter((d) => d?.status === "PRE").length ??
-                    0) === 0
+                  {(loaderData().drafts.filter((d) => d?.status === "PRE")
+                    .length ?? 0) === 0
                     ? "No upcoming drafts"
                     : "Waiting to start"}
                 </p>
@@ -103,12 +104,12 @@ function Dashboard() {
                   </div>
                 </div>
                 <p class="text-3xl font-bold text-white">
-                  {drafts?.()?.filter((d) => d?.status === "DURING").length ??
-                    0}
+                  {loaderData().drafts.filter((d) => d?.status === "DURING")
+                    .length ?? 0}
                 </p>
                 <p class="text-sm text-slate-300 mt-2">
-                  {(drafts?.()?.filter((d) => d?.status === "DURING").length ??
-                    0) === 0
+                  {(loaderData().drafts.filter((d) => d?.status === "DURING")
+                    .length ?? 0) === 0
                     ? "No active drafts"
                     : "In progress"}
                 </p>
@@ -134,11 +135,12 @@ function Dashboard() {
                   </div>
                 </div>
                 <p class="text-3xl font-bold text-white">
-                  {drafts?.()?.filter((d) => d?.status === "POST").length ?? 0}
+                  {loaderData().drafts.filter((d) => d?.status === "POST")
+                    .length ?? 0}
                 </p>
                 <p class="text-sm text-slate-300 mt-2">
-                  {(drafts?.()?.filter((d) => d?.status === "POST").length ??
-                    0) === 0
+                  {(loaderData().drafts.filter((d) => d?.status === "POST")
+                    .length ?? 0) === 0
                     ? "No completed drafts"
                     : "Drafts finished"}
                 </p>
@@ -194,9 +196,12 @@ function Dashboard() {
             <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl p-8 border border-slate-700">
               <h3 class="text-2xl font-bold text-white mb-6">Your Drafts</h3>
 
-              <Show when={drafts()}>
+              <Show
+                when={loaderData().drafts}
+                fallback={<div class="text-slate-400">Loading...</div>}
+              >
                 <Show
-                  when={drafts?.() && (drafts()?.length ?? 0) > 0}
+                  when={loaderData().drafts && loaderData().drafts.length > 0}
                   fallback={
                     <div class="text-center py-12 text-slate-400">
                       <svg
@@ -238,7 +243,7 @@ function Dashboard() {
                   }
                 >
                   <div class="space-y-4">
-                    <For each={drafts?.() ?? []}>
+                    <For each={loaderData().drafts ?? []}>
                       {(draft) => {
                         const statusConfig = () => {
                           switch (draft?.status) {

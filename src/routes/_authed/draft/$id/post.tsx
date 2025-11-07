@@ -5,6 +5,7 @@ import { api } from "convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
 import { Header } from "~/components/header";
 import { authClient } from "~/lib/auth-client";
+import { formatDate } from "~/lib/utils";
 
 export const Route = createFileRoute("/_authed/draft/$id/post")({
   component: PostDraft,
@@ -50,16 +51,6 @@ function PostDraft() {
     return teams.find((t) => t.teamId === selectedTeamId()) || teams[0] || null;
   });
 
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
 
   const calculateDuration = () => {
     if (!draft?.()) return "N/A";

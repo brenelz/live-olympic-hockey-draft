@@ -12,6 +12,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { authClient } from "~/lib/auth-client";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Header } from "~/components/header";
+import { formatDate } from "~/lib/utils";
 
 export const Route = createFileRoute("/_authed/draft/$id/pre")({
   component: PreDraft,
@@ -130,16 +131,6 @@ function PreDraft() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
 
   const handleRandomizeDraftTeams = async () => {
     if (!isHost()) {

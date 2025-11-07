@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "dev:convex": "convex dev",
-    "build": "vite build",
+    "build": "npx convex deploy --cmd 'npm run build'",
     "serve": "vite preview",
     "test": "vitest run",
     "start": "node .output/server/index.mjs"

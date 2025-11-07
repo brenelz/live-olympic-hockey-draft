@@ -35,17 +35,17 @@ function PreDraft() {
 
   // Fetch draft data
   const { data: draft } = useQuery(api.drafts.getDraftById, { draftId });
-  const { data: teams } = useQuery(api.drafts.getDraftTeams, { draftId });
-  const { data: onlineUsers } = useQuery(api.drafts.getOnlineUsers, {
+  const { data: teams } = useQuery(api.draftTeams.getDraftTeams, { draftId });
+  const { data: onlineUsers } = useQuery(api.draftPresence.getOnlineUsers, {
     draftId,
   });
 
   // Start draft mutation
   const { mutate: startDraft } = useMutation(api.drafts.startDraft);
-  const { mutate: updatePresence } = useMutation(api.drafts.updatePresence);
-  const { mutate: removePresence } = useMutation(api.drafts.removePresence);
+  const { mutate: updatePresence } = useMutation(api.draftPresence.updatePresence);
+  const { mutate: removePresence } = useMutation(api.draftPresence.removePresence);
   const { mutate: randomizeDraftTeams } = useMutation(
-    api.drafts.randomizeDraftTeams
+    api.draftTeams.randomizeDraftTeams
   );
 
   const currentUserId = () => session()?.data?.user?.id;

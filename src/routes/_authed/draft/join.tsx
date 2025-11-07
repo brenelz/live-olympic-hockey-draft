@@ -21,7 +21,7 @@ function JoinDraft() {
   const [draftIdInput, setDraftIdInput] = createSignal(search().id || "");
   const [teamName, setTeamName] = createSignal("");
 
-  const { mutate: joinDraft } = useMutation(api.drafts.joinDraft);
+  const { mutate: joinDraft } = useMutation(api.draftTeams.joinDraft);
 
   const handleJoinDraft = async (e: Event) => {
     e.preventDefault();

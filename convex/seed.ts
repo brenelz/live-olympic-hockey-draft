@@ -1,5 +1,4 @@
 import { mutation } from "./_generated/server";
-import { v } from "convex/values";
 
 // Seed the draftablePlayers table with NHL hockey players
 export const seedDraftablePlayers = mutation({

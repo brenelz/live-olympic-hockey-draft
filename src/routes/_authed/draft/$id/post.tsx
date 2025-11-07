@@ -17,10 +17,10 @@ function PostDraft() {
   const draftId = params().id as Id<"drafts">;
 
   const { data: draft } = useQuery(api.drafts.getDraftById, { draftId });
-  const { data: teamsWithRosters } = useQuery(api.drafts.getDraftRosters, {
+  const { data: teamsWithRosters } = useQuery(api.draftPicks.getDraftRosters, {
     draftId,
   });
-  const { data: draftStats } = useQuery(api.drafts.getDraftStats, { draftId });
+  const { data: draftStats } = useQuery(api.draftPicks.getDraftStats, { draftId });
   const session = authClient.useSession();
 
   const [selectedTeamId, setSelectedTeamId] =

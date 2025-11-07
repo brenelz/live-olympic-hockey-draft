@@ -1,4 +1,4 @@
-import { Show, createMemo } from "solid-js";
+import { Show } from "solid-js";
 
 export type TeamItemProps = {
   team: {
@@ -16,9 +16,8 @@ export default function TeamItem(props: TeamItemProps) {
 
   return (
     <div
-      class={`flex items-center justify-between p-4 rounded-lg border bg-slate-900/50 border-slate-600 ${
-        isCurrentUser() ? "ring-2 ring-green-500/50" : ""
-      }`}
+      class={`flex items-center justify-between p-4 rounded-lg border bg-slate-900/50 border-slate-600 ${isCurrentUser() ? "ring-2 ring-green-500/50" : ""
+        }`}
     >
       <div class="flex items-center gap-4">
         <div class="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-full text-white font-bold">

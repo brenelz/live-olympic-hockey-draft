@@ -336,23 +336,3 @@ export const advancePick = mutation({
     return { success: true };
   },
 });
-
-// Re-export functions from other modules
-export {
-  joinDraft,
-  getDraftTeams,
-  isUserInDraft,
-  randomizeDraftTeams,
-} from "./draftTeams";
-export {
-  getAvailablePlayers,
-  getDraftStats,
-  getDraftRosters,
-  getRecentPicks,
-  makePick,
-} from "./draftPicks";
-export {
-  updatePresence,
-  getOnlineUsers,
-  removePresence,
-} from "./draftPresence";

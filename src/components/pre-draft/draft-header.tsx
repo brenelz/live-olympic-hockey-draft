@@ -1,4 +1,3 @@
-import { Show } from "solid-js";
 import { formatDate } from "~/lib/utils";
 import type { Id } from "convex/_generated/dataModel";
 

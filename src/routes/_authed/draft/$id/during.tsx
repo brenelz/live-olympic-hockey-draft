@@ -32,17 +32,17 @@ function DuringDraft() {
   const { data: currentPickData } = useQuery(api.drafts.getCurrentPick, {
     draftId,
   });
-  const { data: availablePlayers } = useQuery(api.drafts.getAvailablePlayers, {
+  const { data: availablePlayers } = useQuery(api.draftPicks.getAvailablePlayers, {
     draftId,
   });
-  const { data: recentPicks } = useQuery(api.drafts.getRecentPicks, {
+  const { data: recentPicks } = useQuery(api.draftPicks.getRecentPicks, {
     draftId,
     limit: 10,
   });
-  const { data: draftStats } = useQuery(api.drafts.getDraftStats, { draftId });
+  const { data: draftStats } = useQuery(api.draftPicks.getDraftStats, { draftId });
   const { mutate: finishDraft } = useMutation(api.drafts.finishDraft);
   const { mutate: advancePick } = useMutation(api.drafts.advancePick);
-  const { mutate: makePickMutation } = useMutation(api.drafts.makePick);
+  const { mutate: makePickMutation } = useMutation(api.draftPicks.makePick);
   const [timeRemaining, setTimeRemaining] = createSignal<number>(45);
   const [hasAdvanced, setHasAdvanced] = createSignal<boolean>(false);
   const [isMakingPick, setIsMakingPick] = createSignal<boolean>(false);
@@ -209,11 +209,10 @@ function DuringDraft() {
                 {(pick) => {
                   return (
                     <div
-                      class={`rounded-lg p-4 border ${
-                        isMyTurn()
-                          ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-500/50 ring-2 ring-green-500/50"
-                          : "bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-blue-500/30"
-                      }`}
+                      class={`rounded-lg p-4 border ${isMyTurn()
+                        ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-500/50 ring-2 ring-green-500/50"
+                        : "bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-blue-500/30"
+                        }`}
                     >
                       <div class="flex items-center justify-between">
                         <div class="flex-1">
@@ -234,13 +233,12 @@ function DuringDraft() {
                         </div>
                         <div class="text-center">
                           <div
-                            class={`text-4xl font-bold ${
-                              timeRemaining() <= 10
-                                ? "text-red-400"
-                                : isMyTurn()
+                            class={`text-4xl font-bold ${timeRemaining() <= 10
+                              ? "text-red-400"
+                              : isMyTurn()
                                 ? "text-green-300"
                                 : "text-white"
-                            }`}
+                              }`}
                           >
                             {timeRemaining()}s
                           </div>
@@ -320,21 +318,18 @@ function DuringDraft() {
                           <button
                             onClick={() => setSelectedPlayer(player._id)}
                             disabled={isMakingPick()}
-                            class={`w-full flex items-center justify-between p-4 rounded-lg border transition-all ${
-                              selectedPlayer() === player._id
-                                ? "bg-blue-600/20 border-blue-500"
-                                : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
-                            } ${
-                              isMakingPick()
+                            class={`w-full flex items-center justify-between p-4 rounded-lg border transition-all ${selectedPlayer() === player._id
+                              ? "bg-blue-600/20 border-blue-500"
+                              : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
+                              } ${isMakingPick()
                                 ? "opacity-50 cursor-not-allowed"
                                 : ""
-                            }`}
+                              }`}
                           >
                             <div class="flex items-center gap-4">
                               <div
-                                class={`w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold ${
-                                  player.avatar ? "hidden" : ""
-                                }`}
+                                class={`w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold ${player.avatar ? "hidden" : ""
+                                  }`}
                               >
                                 {player.name.charAt(0)}
                               </div>
@@ -365,8 +360,8 @@ function DuringDraft() {
                     {isMakingPick()
                       ? "Making Pick..."
                       : selectedPlayer()
-                      ? "Confirm Pick"
-                      : "Select a Player"}
+                        ? "Confirm Pick"
+                        : "Select a Player"}
                   </button>
                 </div>
               </Show>

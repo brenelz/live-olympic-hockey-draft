@@ -79,6 +79,15 @@ function PreDraft() {
     return !isHost() && draft?.() && draft()!.status === "DURING";
   });
 
+  // Check if all data is loaded
+  const isDataReady = createMemo(() => {
+    return (
+      draft?.() !== undefined &&
+      teams?.() !== undefined &&
+      session()?.data?.user !== undefined
+    );
+  });
+
   // Countdown timer
   onMount(() => {
     const updateCountdown = () => {
@@ -208,199 +217,213 @@ function PreDraft() {
       </Show>
       <div class="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-800">
         <Header />
-        <div class="p-8">
-          <div class="max-w-6xl mx-auto">
-            {/* Header */}
-            <Show when={draft?.()}>
-              <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
-                <div class="flex items-start justify-between mb-6">
-                  <div>
-                    <h1 class="text-4xl font-bold text-white mb-2">
-                      {draft()!.name}
-                    </h1>
-                    <div class="flex items-center gap-4 text-slate-300">
-                      <span>📅 {formatDate(draft()!.startDatetime)}</span>
-                      <span>•</span>
-                      <span>
-                        👥 {teams?.()?.length || 0}{" "}
-                        {teams?.()?.length === 1 ? "team" : "teams"} joined
+
+        <Show when={!shouldRedirectToJoin() && !shouldRedirect()}>
+          <div class="p-8">
+            <div class="max-w-6xl mx-auto">
+              {/* Loading State */}
+              <Show when={!isDataReady()}>
+                <div class="flex flex-col items-center justify-center min-h-[60vh]">
+                  <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
+                  <p class="text-slate-300 text-lg font-medium">Loading draft...</p>
+                </div>
+              </Show>
+
+              {/* Main Content - Only show when data is ready */}
+              <Show when={isDataReady()}>
+                {/* Header */}
+                <Show when={draft?.() && teams?.()}>
+                  <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
+                    <div class="flex items-start justify-between mb-6">
+                      <div>
+                        <h1 class="text-4xl font-bold text-white mb-2">
+                          {draft()!.name}
+                        </h1>
+                        <div class="flex items-center gap-4 text-slate-300">
+                          <span>📅 {formatDate(draft()!.startDatetime)}</span>
+                          <span>•</span>
+                          <span>
+                            👥 {teams?.()?.length || 0}{" "}
+                            {teams?.()?.length === 1 ? "team" : "teams"} joined
+                          </span>
+                        </div>
+                      </div>
+                      <span class="px-4 py-2 bg-yellow-600/20 text-yellow-300 text-sm rounded-lg font-medium border border-yellow-600/30">
+                        Pre-Draft
                       </span>
                     </div>
-                  </div>
-                  <span class="px-4 py-2 bg-yellow-600/20 text-yellow-300 text-sm rounded-lg font-medium border border-yellow-600/30">
-                    Pre-Draft
-                  </span>
-                </div>
 
-                {/* Countdown */}
-                <div class="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-6 border border-green-700/30 mb-6">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <p class="text-green-300 text-sm font-medium mb-1">
-                        Draft Starts In
-                      </p>
-                      <p class="text-3xl font-bold text-white">
-                        {timeRemaining() !== null
-                          ? formatTimeRemaining(timeRemaining()!)
-                          : "Loading..."}
-                      </p>
+                    {/* Countdown */}
+                    <div class="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-6 border border-green-700/30 mb-6">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-green-300 text-sm font-medium mb-1">
+                            Draft Starts In
+                          </p>
+                          <p class="text-3xl font-bold text-white">
+                            {timeRemaining() !== null
+                              ? formatTimeRemaining(timeRemaining()!)
+                              : "Loading..."}
+                          </p>
+                        </div>
+                        <div class="text-6xl">⏰</div>
+                      </div>
                     </div>
-                    <div class="text-6xl">⏰</div>
-                  </div>
-                </div>
 
-                {/* Share Link */}
-                <div class="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-lg p-6 border border-blue-700/30">
-                  <div class="flex items-center justify-between gap-4">
-                    <div class="flex-1 min-w-0">
-                      <p class="text-blue-300 text-sm font-medium mb-2">
-                        Share Draft Link
-                      </p>
-                      <div class="flex items-center gap-2 bg-slate-900/50 rounded-lg p-3 border border-slate-600">
-                        <input
-                          type="text"
-                          value={getShareLink()}
-                          readonly
-                          class="flex-1 bg-transparent text-white text-sm focus:outline-none cursor-text"
-                        />
-                        <button
-                          onClick={handleCopyLink}
-                          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm whitespace-nowrap flex items-center gap-2"
-                        >
-                          <Show when={copySuccess()} fallback={<>📋 Copy</>}>
-                            ✓ Copied!
-                          </Show>
-                        </button>
+                    {/* Share Link */}
+                    <div class="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-lg p-6 border border-blue-700/30">
+                      <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 min-w-0">
+                          <p class="text-blue-300 text-sm font-medium mb-2">
+                            Share Draft Link
+                          </p>
+                          <div class="flex items-center gap-2 bg-slate-900/50 rounded-lg p-3 border border-slate-600">
+                            <input
+                              type="text"
+                              value={getShareLink()}
+                              readonly
+                              class="flex-1 bg-transparent text-white text-sm focus:outline-none cursor-text"
+                            />
+                            <button
+                              onClick={handleCopyLink}
+                              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm whitespace-nowrap flex items-center gap-2"
+                            >
+                              <Show when={copySuccess()} fallback={<>📋 Copy</>}>
+                                ✓ Copied!
+                              </Show>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </Show>
+                </Show>
 
-            {/* Error Message */}
-            <Show when={error()}>
-              <div class="bg-red-900/30 border border-red-700/50 rounded-lg p-4 mb-6">
-                <p class="text-red-300 text-sm">{error()}</p>
-              </div>
-            </Show>
-
-            {/* Teams List */}
-            <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
-              <h2 class="text-2xl font-bold text-white mb-6">
-                Draft Order & Teams ({teams?.()?.length || 0})
-              </h2>
-              <Show
-                when={teams?.() && teams()!.length > 0}
-                fallback={
-                  <div class="text-center py-8 text-slate-400">
-                    <p>
-                      No teams have joined yet. Share the invite link above!
-                    </p>
+                {/* Error Message */}
+                <Show when={error()}>
+                  <div class="bg-red-900/30 border border-red-700/50 rounded-lg p-4 mb-6">
+                    <p class="text-red-300 text-sm">{error()}</p>
                   </div>
-                }
-              >
-                <div class="space-y-3">
-                  <For each={teams?.() || []}>
-                    {(team) => {
-                      const isCurrentUser = () =>
-                        currentUserId() === team.betterAuthUserId;
-                      const isOnline = createMemo(() => {
-                        const online = onlineUsers?.();
-                        return online
-                          ? online.includes(team.betterAuthUserId)
-                          : false;
-                      });
-                      return (
-                        <div
-                          class={`flex items-center justify-between p-4 rounded-lg border ${"bg-slate-900/50 border-slate-600"} ${isCurrentUser() ? "ring-2 ring-green-500/50" : ""
-                            }`}
-                        >
-                          <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-full text-white font-bold">
-                              {team.draftOrderNumber}
-                            </div>
-                            <div>
-                              <div class="flex items-center gap-2">
-                                <p class="text-white font-semibold">
-                                  {team.teamName}
-                                </p>
-                                {isCurrentUser() && (
-                                  <span class="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 rounded border border-blue-500/30">
-                                    Your Team
-                                  </span>
-                                )}
-                              </div>
-                              <p class="text-slate-400 text-sm">Joined</p>
-                            </div>
-                          </div>
-                          <div class="flex items-center gap-3">
-                            {/* Online indicator */}
-                            <Show
-                              when={isOnline()}
-                              fallback={
-                                <div class="flex items-center gap-1">
-                                  <div class="w-2 h-2 bg-slate-500 rounded-full"></div>
-                                  <span class="text-slate-400 text-xs">
-                                    Offline
-                                  </span>
-                                </div>
-                              }
-                            >
-                              <div class="flex items-center gap-1">
-                                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <span class="text-green-400 text-xs">
-                                  Online
-                                </span>
-                              </div>
-                            </Show>
-                          </div>
-                        </div>
-                      );
-                    }}
-                  </For>
-                </div>
-              </Show>
-            </div>
+                </Show>
 
-            {/* Action Buttons */}
-            <div class="flex gap-4">
-              <button
-                onClick={() => navigate({ to: "/dashboard" })}
-                class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium"
-              >
-                Back to Dashboard
-              </button>
-              <Show when={isHost()}>
-                <button
-                  onClick={handleRandomizeDraftTeams}
-                  class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
-                >
-                  Randomize Order
-                </button>
-                <button
-                  onClick={handleStartDraft}
-                  disabled={
-                    isStarting() ||
-                    (timeRemaining() !== null && timeRemaining()! > 0)
-                  }
-                  class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
-                >
-                  {isStarting()
-                    ? "Starting..."
-                    : timeRemaining() !== null && timeRemaining()! > 0
-                      ? `Start Draft (${formatTimeRemaining(timeRemaining()!)})`
-                      : "Start Draft →"}
-                </button>
-              </Show>
-              <Show when={!isHost()}>
-                <div class="flex-1 px-6 py-3 bg-slate-700/50 text-slate-400 rounded-lg text-center">
-                  Waiting for host to start the draft...
+                {/* Teams List */}
+                <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-8 mb-6">
+                  <h2 class="text-2xl font-bold text-white mb-6">
+                    Draft Order & Teams ({teams?.()?.length || 0})
+                  </h2>
+                  <Show
+                    when={teams?.() && teams()!.length > 0}
+                    fallback={
+                      <div class="text-center py-8 text-slate-400">
+                        <p>
+                          No teams have joined yet. Share the invite link above!
+                        </p>
+                      </div>
+                    }
+                  >
+                    <div class="space-y-3">
+                      <For each={teams?.() || []}>
+                        {(team) => {
+                          const isCurrentUser = () =>
+                            currentUserId() === team.betterAuthUserId;
+                          const isOnline = createMemo(() => {
+                            const online = onlineUsers?.();
+                            return online
+                              ? online.includes(team.betterAuthUserId)
+                              : false;
+                          });
+                          return (
+                            <div
+                              class={`flex items-center justify-between p-4 rounded-lg border ${"bg-slate-900/50 border-slate-600"} ${isCurrentUser() ? "ring-2 ring-green-500/50" : ""
+                                }`}
+                            >
+                              <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-full text-white font-bold">
+                                  {team.draftOrderNumber}
+                                </div>
+                                <div>
+                                  <div class="flex items-center gap-2">
+                                    <p class="text-white font-semibold">
+                                      {team.teamName}
+                                    </p>
+                                    {isCurrentUser() && (
+                                      <span class="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 rounded border border-blue-500/30">
+                                        Your Team
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p class="text-slate-400 text-sm">Joined</p>
+                                </div>
+                              </div>
+                              <div class="flex items-center gap-3">
+                                {/* Online indicator */}
+                                <Show
+                                  when={isOnline()}
+                                  fallback={
+                                    <div class="flex items-center gap-1">
+                                      <div class="w-2 h-2 bg-slate-500 rounded-full"></div>
+                                      <span class="text-slate-400 text-xs">
+                                        Offline
+                                      </span>
+                                    </div>
+                                  }
+                                >
+                                  <div class="flex items-center gap-1">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span class="text-green-400 text-xs">
+                                      Online
+                                    </span>
+                                  </div>
+                                </Show>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      </For>
+                    </div>
+                  </Show>
+                </div>
+
+                {/* Action Buttons */}
+                <div class="flex gap-4">
+                  <button
+                    onClick={() => navigate({ to: "/dashboard" })}
+                    class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium"
+                  >
+                    Back to Dashboard
+                  </button>
+                  <Show when={isHost()}>
+                    <button
+                      onClick={handleRandomizeDraftTeams}
+                      class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
+                    >
+                      Randomize Order
+                    </button>
+                    <button
+                      onClick={handleStartDraft}
+                      disabled={
+                        isStarting() ||
+                        (timeRemaining() !== null && timeRemaining()! > 0)
+                      }
+                      class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
+                    >
+                      {isStarting()
+                        ? "Starting..."
+                        : timeRemaining() !== null && timeRemaining()! > 0
+                          ? `Start Draft (${formatTimeRemaining(timeRemaining()!)})`
+                          : "Start Draft →"}
+                    </button>
+                  </Show>
+                  <Show when={!isHost()}>
+                    <div class="flex-1 px-6 py-3 bg-slate-700/50 text-slate-400 rounded-lg text-center">
+                      Waiting for host to start the draft...
+                    </div>
+                  </Show>
                 </div>
               </Show>
             </div>
           </div>
-        </div>
+        </Show >
       </div>
     </>
   );

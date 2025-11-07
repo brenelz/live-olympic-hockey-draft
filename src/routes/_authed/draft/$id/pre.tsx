@@ -42,8 +42,7 @@ function PreDraft() {
 
   // Start draft mutation
   const { mutate: startDraft } = useMutation(api.drafts.startDraft);
-  const { mutate: updatePresence } = useMutation(api.draftPresence.updatePresence);
-  const { mutate: removePresence } = useMutation(api.draftPresence.removePresence);
+  const { mutate: heartbeat } = useMutation(api.draftPresence.heartbeat);
   const { mutate: randomizeDraftTeams } = useMutation(
     api.draftTeams.randomizeDraftTeams
   );
@@ -106,22 +105,17 @@ function PreDraft() {
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
 
-    // Update presence heartbeat every 10 seconds
-    const updatePresenceHeartbeat = () => {
-      updatePresence({ draftId });
-    };
-
-    // Update immediately and then every 10 seconds
-    updatePresenceHeartbeat();
-    const presenceInterval = setInterval(updatePresenceHeartbeat, 10000);
+    // Simplified presence: just call heartbeat every 15 seconds
+    // Auto-cleanup handles stale entries, no need for manual removal
+    heartbeat({ draftId });
+    const presenceInterval = setInterval(() => {
+      heartbeat({ draftId });
+    }, 15000);
 
     onCleanup(() => {
       clearInterval(interval);
       clearInterval(presenceInterval);
-      // Remove presence when component unmounts (user navigates away)
-      removePresence({ draftId }).catch(() => {
-        // Ignore errors - user might have already been removed
-      });
+      // No need to manually remove - auto-cleanup handles it
     });
   });
 

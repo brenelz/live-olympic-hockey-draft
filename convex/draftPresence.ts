@@ -2,16 +2,14 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
-// Update heartbeat to track user presence in a draft
-export const updatePresence = mutation({
+// Simplified presence: single mutation that handles upsert + cleanup
+export const heartbeat = mutation({
   args: {
     draftId: v.id("drafts"),
   },
   handler: async (ctx, args) => {
     const authUser = await authComponent.getAuthUser(ctx);
-    if (!authUser || !authUser._id) {
-      return;
-    }
+    if (!authUser?._id) return;
 
     const betterAuthUserId = authUser._id;
     const now = Date.now();
@@ -25,9 +23,7 @@ export const updatePresence = mutation({
 
     if (existing) {
       // Update last seen timestamp
-      await ctx.db.patch(existing._id, {
-        lastSeen: now,
-      });
+      await ctx.db.patch(existing._id, { lastSeen: now });
     } else {
       // Create new presence entry
       await ctx.db.insert("draftPresence", {
@@ -36,10 +32,22 @@ export const updatePresence = mutation({
         lastSeen: now,
       });
     }
+
+    // Auto-cleanup stale entries (older than 60 seconds) - runs on every heartbeat
+    const staleThreshold = now - 60 * 1000;
+    const staleEntries = await ctx.db
+      .query("draftPresence")
+      .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
+      .filter((q) => q.lt(q.field("lastSeen"), staleThreshold))
+      .collect();
+
+    for (const entry of staleEntries) {
+      await ctx.db.delete(entry._id);
+    }
   },
 });
 
-// Get online users for a draft (users who have been active in the last 30 seconds)
+// Get online users for a draft (simplified - just filter by threshold)
 export const getOnlineUsers = query({
   args: {
     draftId: v.id("drafts"),
@@ -48,45 +56,14 @@ export const getOnlineUsers = query({
     const now = Date.now();
     const ONLINE_THRESHOLD = 30 * 1000; // 30 seconds
 
-    // Get all presence entries for this draft
     const presenceEntries = await ctx.db
       .query("draftPresence")
       .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
       .collect();
 
-    // Filter to only users who have been active recently
-    // Users are considered offline if their lastSeen is older than 30 seconds
-    const onlineUserIds = presenceEntries
+    return presenceEntries
       .filter((entry) => now - entry.lastSeen < ONLINE_THRESHOLD)
       .map((entry) => entry.betterAuthUserId);
-
-    return onlineUserIds;
-  },
-});
-
-// Remove presence when user leaves the draft page
-export const removePresence = mutation({
-  args: {
-    draftId: v.id("drafts"),
-  },
-  handler: async (ctx, args) => {
-    const authUser = await authComponent.getAuthUser(ctx);
-    if (!authUser || !authUser._id) {
-      return;
-    }
-
-    const betterAuthUserId = authUser._id;
-
-    // Find and delete presence entry
-    const existing = await ctx.db
-      .query("draftPresence")
-      .withIndex("draftId", (q) => q.eq("draftId", args.draftId))
-      .filter((q) => q.eq(q.field("betterAuthUserId"), betterAuthUserId))
-      .first();
-
-    if (existing) {
-      await ctx.db.delete(existing._id);
-    }
   },
 });
 

@@ -31,7 +31,7 @@ export const createAuth = (
     },
     plugins: [
       // The Convex plugin is required for Convex compatibility
-      convex(),
+      convex({ jwtExpirationSeconds: 60 * 60 * 24 }),
     ],
   });
 };

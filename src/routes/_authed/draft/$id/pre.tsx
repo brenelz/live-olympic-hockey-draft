@@ -337,8 +337,8 @@ function PreDraft() {
                                   {team.teamName}
                                 </p>
                                 {isCurrentUser() && (
-                                  <span class="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded-full border border-green-600/30">
-                                    You
+                                  <span class="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 rounded border border-blue-500/30">
+                                    Your Team
                                   </span>
                                 )}
                               </div>

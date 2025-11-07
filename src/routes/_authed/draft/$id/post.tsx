@@ -4,6 +4,7 @@ import { useQuery } from "convex-solidjs";
 import { api } from "convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
 import { Header } from "~/components/header";
+import { authClient } from "~/lib/auth-client";
 
 export const Route = createFileRoute("/_authed/draft/$id/post")({
   component: PostDraft,
@@ -19,15 +20,27 @@ function PostDraft() {
     draftId,
   });
   const { data: draftStats } = useQuery(api.drafts.getDraftStats, { draftId });
+  const session = authClient.useSession();
 
   const [selectedTeamId, setSelectedTeamId] =
     createSignal<Id<"draftTeams"> | null>(null);
 
-  // Set first team as selected by default
+  const currentUserId = () => session()?.data?.user?.id;
+
+  // Find and auto-select the current user's team
+  const userTeam = createMemo(() => {
+    const teams = teamsWithRosters?.();
+    const userId = currentUserId();
+    if (!teams || !userId) return null;
+    return teams.find((t) => t.betterAuthUserId === userId) || null;
+  });
+
+  // Set user's team as selected by default, otherwise first team
   createMemo(() => {
     const teams = teamsWithRosters?.();
     if (teams && teams.length > 0 && !selectedTeamId()) {
-      setSelectedTeamId(teams[0].teamId);
+      const userTeamId = userTeam()?.teamId;
+      setSelectedTeamId(userTeamId || teams[0].teamId);
     }
   });
 
@@ -154,21 +167,41 @@ function PostDraft() {
                 <h2 class="text-xl font-bold text-white mb-4">Teams</h2>
                 <div class="space-y-2">
                   <For each={teamsWithRosters?.() || []}>
-                    {(team) => (
-                      <button
-                        onClick={() => setSelectedTeamId(team.teamId)}
-                        class={`w-full text-left p-4 rounded-lg border transition-all ${
-                          selectedTeamId() === team.teamId
-                            ? "bg-indigo-600/20 border-indigo-500"
-                            : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
-                        }`}
-                      >
-                        <p class="text-white font-semibold">{team.teamName}</p>
-                        <p class="text-slate-400 text-sm">
-                          Pick #{team.draftOrderNumber}
-                        </p>
-                      </button>
-                    )}
+                    {(team) => {
+                      const userId = currentUserId();
+                      const isUserTeam =
+                        userId && team.betterAuthUserId === userId;
+                      return (
+                        <button
+                          onClick={() => setSelectedTeamId(team.teamId)}
+                          class={`w-full text-left p-4 rounded-lg border transition-all ${
+                            selectedTeamId() === team.teamId
+                              ? isUserTeam
+                                ? "bg-blue-600/30 border-blue-500"
+                                : "bg-indigo-600/20 border-indigo-500"
+                              : isUserTeam
+                              ? "bg-blue-600/10 border-blue-600/50 hover:bg-blue-600/20"
+                              : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
+                          }`}
+                        >
+                          <div class="flex items-center justify-between">
+                            <div>
+                              <p class="text-white font-semibold">
+                                {team.teamName}
+                              </p>
+                              <p class="text-slate-400 text-sm">
+                                Pick #{team.draftOrderNumber}
+                              </p>
+                            </div>
+                            <Show when={isUserTeam}>
+                              <span class="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 rounded border border-blue-500/30">
+                                Your Team
+                              </span>
+                            </Show>
+                          </div>
+                        </button>
+                      );
+                    }}
                   </For>
                 </div>
               </div>
@@ -182,121 +215,133 @@ function PostDraft() {
                   </div>
                 }
               >
-                {(team) => (
-                  <div class="lg:col-span-3 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
-                    <h2 class="text-2xl font-bold text-white mb-6">
-                      {team().teamName} Roster
-                    </h2>
+                {(team) => {
+                  const userId = currentUserId();
+                  const isUserTeam = () =>
+                    userId && team().betterAuthUserId === userId;
+                  return (
+                    <div class="lg:col-span-3 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
+                      <div class="flex items-center gap-3 mb-6">
+                        <h2 class="text-2xl font-bold text-white">
+                          {team().teamName} Roster
+                        </h2>
+                        <Show when={isUserTeam()}>
+                          <span class="px-3 py-1 text-sm font-medium bg-blue-500/20 text-blue-300 rounded-lg border border-blue-500/30">
+                            Your Team
+                          </span>
+                        </Show>
+                      </div>
 
-                    {/* Forwards */}
-                    <div class="mb-6">
-                      <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-                        Forwards ({team().forwards.length})
-                      </h3>
-                      <Show
-                        when={team().forwards.length > 0}
-                        fallback={
-                          <p class="text-slate-400 text-sm">
-                            No forwards selected
-                          </p>
-                        }
-                      >
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <For each={team().forwards}>
-                            {(player) => (
-                              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                                <div class="flex justify-between items-start mb-1">
-                                  <p class="text-white font-semibold">
-                                    {player.name}
+                      {/* Forwards */}
+                      <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                          <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          Forwards ({team().forwards.length})
+                        </h3>
+                        <Show
+                          when={team().forwards.length > 0}
+                          fallback={
+                            <p class="text-slate-400 text-sm">
+                              No forwards selected
+                            </p>
+                          }
+                        >
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <For each={team().forwards}>
+                              {(player) => (
+                                <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                                  <div class="flex justify-between items-start mb-1">
+                                    <p class="text-white font-semibold">
+                                      {player.name}
+                                    </p>
+                                    <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                                      #{player.pickNum}
+                                    </span>
+                                  </div>
+                                  <p class="text-slate-400 text-sm">
+                                    {player.position}
                                   </p>
-                                  <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                                    #{player.pickNum}
-                                  </span>
                                 </div>
-                                <p class="text-slate-400 text-sm">
-                                  {player.position}
-                                </p>
-                              </div>
-                            )}
-                          </For>
-                        </div>
-                      </Show>
-                    </div>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+                      </div>
 
-                    {/* Defense */}
-                    <div class="mb-6">
-                      <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                        Defense ({team().defense.length})
-                      </h3>
-                      <Show
-                        when={team().defense.length > 0}
-                        fallback={
-                          <p class="text-slate-400 text-sm">
-                            No defensemen selected
-                          </p>
-                        }
-                      >
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <For each={team().defense}>
-                            {(player) => (
-                              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                                <div class="flex justify-between items-start mb-1">
-                                  <p class="text-white font-semibold">
-                                    {player.name}
+                      {/* Defense */}
+                      <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                          <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                          Defense ({team().defense.length})
+                        </h3>
+                        <Show
+                          when={team().defense.length > 0}
+                          fallback={
+                            <p class="text-slate-400 text-sm">
+                              No defensemen selected
+                            </p>
+                          }
+                        >
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <For each={team().defense}>
+                              {(player) => (
+                                <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                                  <div class="flex justify-between items-start mb-1">
+                                    <p class="text-white font-semibold">
+                                      {player.name}
+                                    </p>
+                                    <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                                      #{player.pickNum}
+                                    </span>
+                                  </div>
+                                  <p class="text-slate-400 text-sm">
+                                    {player.position}
                                   </p>
-                                  <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                                    #{player.pickNum}
-                                  </span>
                                 </div>
-                                <p class="text-slate-400 text-sm">
-                                  {player.position}
-                                </p>
-                              </div>
-                            )}
-                          </For>
-                        </div>
-                      </Show>
-                    </div>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+                      </div>
 
-                    {/* Goalies */}
-                    <div>
-                      <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                        <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
-                        Goalies ({team().goalies.length})
-                      </h3>
-                      <Show
-                        when={team().goalies.length > 0}
-                        fallback={
-                          <p class="text-slate-400 text-sm">
-                            No goalies selected
-                          </p>
-                        }
-                      >
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <For each={team().goalies}>
-                            {(player) => (
-                              <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
-                                <div class="flex justify-between items-start mb-1">
-                                  <p class="text-white font-semibold">
-                                    {player.name}
+                      {/* Goalies */}
+                      <div>
+                        <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                          <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
+                          Goalies ({team().goalies.length})
+                        </h3>
+                        <Show
+                          when={team().goalies.length > 0}
+                          fallback={
+                            <p class="text-slate-400 text-sm">
+                              No goalies selected
+                            </p>
+                          }
+                        >
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <For each={team().goalies}>
+                              {(player) => (
+                                <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-600">
+                                  <div class="flex justify-between items-start mb-1">
+                                    <p class="text-white font-semibold">
+                                      {player.name}
+                                    </p>
+                                    <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                                      #{player.pickNum}
+                                    </span>
+                                  </div>
+                                  <p class="text-slate-400 text-sm">
+                                    {player.position}
                                   </p>
-                                  <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                                    #{player.pickNum}
-                                  </span>
                                 </div>
-                                <p class="text-slate-400 text-sm">
-                                  {player.position}
-                                </p>
-                              </div>
-                            )}
-                          </For>
-                        </div>
-                      </Show>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                }}
               </Show>
             </div>
           </Show>

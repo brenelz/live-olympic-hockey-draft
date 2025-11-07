@@ -9,6 +9,9 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as draftPicks from "../draftPicks.js";
+import type * as draftPresence from "../draftPresence.js";
+import type * as draftTeams from "../draftTeams.js";
 import type * as drafts from "../drafts.js";
 import type * as http from "../http.js";
 import type * as seed from "../seed.js";
@@ -29,6 +32,9 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  draftPicks: typeof draftPicks;
+  draftPresence: typeof draftPresence;
+  draftTeams: typeof draftTeams;
   drafts: typeof drafts;
   http: typeof http;
   seed: typeof seed;

@@ -23,7 +23,7 @@ function CreateDraft() {
   const [error, setError] = createSignal("");
   const [teamName, setTeamName] = createSignal("");
 
-  const { mutate: createDraft } = useMutation(api.drafts.create);
+  const { mutate: createDraft } = useMutation(api.drafts.createDraft);
 
   const handleCreateDraft = async (e: Event) => {
     e.preventDefault();

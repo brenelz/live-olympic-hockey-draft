@@ -29,7 +29,7 @@ function DuringDraft() {
   const session = authClient.useSession();
   const draftId = id() as Id<"drafts">;
   const { data: draft } = useQuery(api.drafts.getDraftById, { draftId });
-  const { data: currentPickData } = useQuery(api.drafts.getCurrentPick, {
+  const { data: currentPickData } = useQuery(api.draftPicks.getCurrentPick, {
     draftId,
   });
   const { data: availablePlayers } = useQuery(api.draftPicks.getAvailablePlayers, {
@@ -41,7 +41,7 @@ function DuringDraft() {
   });
   const { data: draftStats } = useQuery(api.draftPicks.getDraftStats, { draftId });
   const { mutate: finishDraft } = useMutation(api.drafts.finishDraft);
-  const { mutate: advancePick } = useMutation(api.drafts.advancePick);
+  const { mutate: advancePick } = useMutation(api.draftPicks.advancePick);
   const { mutate: makePickMutation } = useMutation(api.draftPicks.makePick);
   const [timeRemaining, setTimeRemaining] = createSignal<number>(45);
   const [hasAdvanced, setHasAdvanced] = createSignal<boolean>(false);

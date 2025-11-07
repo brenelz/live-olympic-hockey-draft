@@ -9,6 +9,7 @@ import {
   onMount,
   onCleanup,
   createEffect,
+  createMemo,
 } from "solid-js";
 import { Header } from "~/components/header";
 import { authClient } from "~/lib/auth-client";
@@ -65,18 +66,16 @@ function DuringDraft() {
   };
 
   // Redirect to post page if draft is complete
-  createEffect(() => {
+  const shouldRedirectToPost = createMemo(() => {
     const draftData = draft?.();
-    if (draftData && draftData.status === "POST") {
-      navigate({ to: "/draft/$id/post", params: { id: id() } });
-    }
+    return draftData && draftData.status === "POST";
   });
 
   // Countdown timer and auto-advance
   onMount(() => {
     const updateCountdown = async () => {
       // Don't auto-advance if a pick is being made
-      if ((currentPickData?.()?.round ?? 0) >= 6) {
+      if ((currentPickData?.()?.round ?? 0) >= 7) {
         await handleFinishDraft();
         return;
       }
@@ -161,301 +160,316 @@ function DuringDraft() {
     navigate({ to: "/draft/$id/post", params: { id: id() } });
   };
 
-  return (
-    <div class="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-800">
-      <Header />
-      <div class="p-6">
-        <div class="max-w-7xl mx-auto">
-          {/* Header with Current Pick Info */}
-          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6 mb-6">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h1 class="text-3xl font-bold text-white mb-1">
-                  {draft?.()?.name || "Draft"}
-                </h1>
-                <Show when={currentPickData?.()}>
-                  {(pick) => (
-                    <p class="text-slate-300">
-                      Round {pick().round} • Pick #{pick().pickNumber}
-                    </p>
-                  )}
-                </Show>
-              </div>
-              <span class="px-4 py-2 bg-red-600/20 text-red-300 text-sm rounded-lg font-medium border border-red-600/30 animate-pulse">
-                LIVE
-              </span>
-            </div>
+  // Redirect component that handles navigation to post page
+  const RedirectToPost = () => {
+    onMount(() => {
+      navigate({ to: "/draft/$id/post", params: { id: id() } });
+    });
+    return null;
+  };
 
-            {/* On The Clock */}
-            <Show
-              when={currentPickData?.()}
-              fallback={
-                <div class="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg p-4 border border-blue-500/30">
-                  <p class="text-white">Loading...</p>
+  return (
+    <>
+      <Show when={shouldRedirectToPost()}>
+        <RedirectToPost />
+      </Show>
+      <div class="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-800">
+        <Header />
+        <div class="p-6">
+          <div class="max-w-7xl mx-auto">
+            {/* Header with Current Pick Info */}
+            <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6 mb-6">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h1 class="text-3xl font-bold text-white mb-1">
+                    {draft?.()?.name || "Draft"}
+                  </h1>
+                  <Show when={currentPickData?.()}>
+                    {(pick) => (
+                      <p class="text-slate-300">
+                        Round {pick().round} • Pick #{pick().pickNumber}
+                      </p>
+                    )}
+                  </Show>
                 </div>
-              }
-            >
-              {(pick) => {
-                return (
-                  <div
-                    class={`rounded-lg p-4 border ${
-                      isMyTurn()
-                        ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-500/50 ring-2 ring-green-500/50"
-                        : "bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-blue-500/30"
-                    }`}
-                  >
-                    <div class="flex items-center justify-between">
-                      <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-1">
-                          <p class="text-sm text-slate-300">ON THE CLOCK</p>
-                          {isMyTurn() && (
-                            <span class="px-2 py-0.5 bg-green-500/30 text-green-300 text-xs font-bold rounded-full border border-green-500/50 animate-pulse">
-                              YOUR TURN
-                            </span>
-                          )}
+                <span class="px-4 py-2 bg-red-600/20 text-red-300 text-sm rounded-lg font-medium border border-red-600/30 animate-pulse">
+                  LIVE
+                </span>
+              </div>
+
+              {/* On The Clock */}
+              <Show
+                when={currentPickData?.()}
+                fallback={
+                  <div class="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg p-4 border border-blue-500/30">
+                    <p class="text-white">Loading...</p>
+                  </div>
+                }
+              >
+                {(pick) => {
+                  return (
+                    <div
+                      class={`rounded-lg p-4 border ${
+                        isMyTurn()
+                          ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-500/50 ring-2 ring-green-500/50"
+                          : "bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-blue-500/30"
+                      }`}
+                    >
+                      <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                          <div class="flex items-center gap-2 mb-1">
+                            <p class="text-sm text-slate-300">ON THE CLOCK</p>
+                            {isMyTurn() && (
+                              <span class="px-2 py-0.5 bg-green-500/30 text-green-300 text-xs font-bold rounded-full border border-green-500/50 animate-pulse">
+                                YOUR TURN
+                              </span>
+                            )}
+                          </div>
+                          <p class="text-2xl font-bold text-white">
+                            {pick().team.teamName}
+                          </p>
+                          <p class="text-slate-400 text-sm">
+                            Pick #{pick().pickNumber}
+                          </p>
                         </div>
-                        <p class="text-2xl font-bold text-white">
-                          {pick().team.teamName}
-                        </p>
-                        <p class="text-slate-400 text-sm">
-                          Pick #{pick().pickNumber}
-                        </p>
-                      </div>
-                      <div class="text-center">
-                        <div
-                          class={`text-4xl font-bold ${
-                            timeRemaining() <= 10
-                              ? "text-red-400"
-                              : isMyTurn()
-                              ? "text-green-300"
-                              : "text-white"
-                          }`}
-                        >
-                          {timeRemaining()}s
+                        <div class="text-center">
+                          <div
+                            class={`text-4xl font-bold ${
+                              timeRemaining() <= 10
+                                ? "text-red-400"
+                                : isMyTurn()
+                                ? "text-green-300"
+                                : "text-white"
+                            }`}
+                          >
+                            {timeRemaining()}s
+                          </div>
+                          <p class="text-slate-400 text-sm">remaining</p>
                         </div>
-                        <p class="text-slate-400 text-sm">remaining</p>
                       </div>
                     </div>
-                  </div>
-                );
-              }}
-            </Show>
+                  );
+                }}
+              </Show>
 
-            {/* Your Turn Banner */}
-            <Show when={isMyTurn()}>
-              <div class="bg-gradient-to-r from-green-600/40 to-emerald-600/40 rounded-lg p-4 border-2 border-green-500/50 mb-6 animate-pulse">
-                <div class="flex items-center justify-center gap-3">
-                  <div class="text-3xl">⏰</div>
-                  <div>
-                    <p class="text-xl font-bold text-white">
-                      It's Your Turn to Pick!
-                    </p>
-                    <p class="text-green-200 text-sm">
-                      You have {timeRemaining()} seconds remaining
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Show>
-          </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Available Players - Only show when it's your turn */}
-            <Show
-              when={isMyTurn()}
-              fallback={
-                <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6 flex items-center justify-center">
-                  <div class="text-center">
-                    <div class="text-6xl mb-4">⏳</div>
-                    <p class="text-xl font-bold text-white mb-2">
-                      Waiting for Your Turn
-                    </p>
-                    <p class="text-slate-400">
-                      The player selection will appear when it's your turn to
-                      pick.
-                    </p>
+              {/* Your Turn Banner */}
+              <Show when={isMyTurn()}>
+                <div class="bg-gradient-to-r from-green-600/40 to-emerald-600/40 rounded-lg p-4 border-2 border-green-500/50 mb-6 animate-pulse">
+                  <div class="flex items-center justify-center gap-3">
+                    <div class="text-3xl">⏰</div>
+                    <div>
+                      <p class="text-xl font-bold text-white">
+                        It's Your Turn to Pick!
+                      </p>
+                      <p class="text-green-200 text-sm">
+                        You have {timeRemaining()} seconds remaining
+                      </p>
+                    </div>
                   </div>
                 </div>
-              }
-            >
-              <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
-                <h2 class="text-2xl font-bold text-white mb-4">
-                  Available Players
-                </h2>
+              </Show>
+            </div>
 
-                {/* Search */}
-                <div class="mb-4">
-                  <input
-                    type="text"
-                    value={searchQuery()}
-                    onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                    placeholder="Search players..."
-                    class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Available Players - Only show when it's your turn */}
+              <Show
+                when={isMyTurn()}
+                fallback={
+                  <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6 flex items-center justify-center">
+                    <div class="text-center">
+                      <div class="text-6xl mb-4">⏳</div>
+                      <p class="text-xl font-bold text-white mb-2">
+                        Waiting for Your Turn
+                      </p>
+                      <p class="text-slate-400">
+                        The player selection will appear when it's your turn to
+                        pick.
+                      </p>
+                    </div>
+                  </div>
+                }
+              >
+                <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
+                  <h2 class="text-2xl font-bold text-white mb-4">
+                    Available Players
+                  </h2>
+
+                  {/* Search */}
+                  <div class="mb-4">
+                    <input
+                      type="text"
+                      value={searchQuery()}
+                      onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                      placeholder="Search players..."
+                      class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Players List */}
+                  <div class="space-y-2 max-h-[600px] overflow-y-auto">
+                    <Show
+                      when={filteredPlayers().length > 0}
+                      fallback={
+                        <div class="text-center py-8 text-slate-400">
+                          <p>No available players found</p>
+                        </div>
+                      }
+                    >
+                      <For each={filteredPlayers()}>
+                        {(player) => (
+                          <button
+                            onClick={() => setSelectedPlayer(player._id)}
+                            disabled={isMakingPick()}
+                            class={`w-full flex items-center justify-between p-4 rounded-lg border transition-all ${
+                              selectedPlayer() === player._id
+                                ? "bg-blue-600/20 border-blue-500"
+                                : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
+                            } ${
+                              isMakingPick()
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }`}
+                          >
+                            <div class="flex items-center gap-4">
+                              <div
+                                class={`w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold ${
+                                  player.avatar ? "hidden" : ""
+                                }`}
+                              >
+                                {player.name.charAt(0)}
+                              </div>
+                              <div class="text-left">
+                                <p class="text-white font-semibold">
+                                  {player.name}
+                                </p>
+                                <p class="text-slate-400 text-sm">
+                                  {player.position}
+                                </p>
+                              </div>
+                            </div>
+                            {selectedPlayer() === player._id && (
+                              <span class="text-blue-400">✓</span>
+                            )}
+                          </button>
+                        )}
+                      </For>
+                    </Show>
+                  </div>
+
+                  {/* Make Pick Button */}
+                  <button
+                    onClick={makePick}
+                    disabled={!selectedPlayer() || isMakingPick()}
+                    class="w-full mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg"
+                  >
+                    {isMakingPick()
+                      ? "Making Pick..."
+                      : selectedPlayer()
+                      ? "Confirm Pick"
+                      : "Select a Player"}
+                  </button>
                 </div>
+              </Show>
 
-                {/* Players List */}
-                <div class="space-y-2 max-h-[600px] overflow-y-auto">
+              {/* Sidebar */}
+              <div class="space-y-6">
+                {/* Recent Picks */}
+                <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
+                  <h3 class="text-xl font-bold text-white mb-4">
+                    Recent Picks
+                  </h3>
                   <Show
-                    when={filteredPlayers().length > 0}
+                    when={recentPicks?.() && recentPicks()!.length > 0}
                     fallback={
-                      <div class="text-center py-8 text-slate-400">
-                        <p>No available players found</p>
+                      <div class="text-center py-4 text-slate-400 text-sm">
+                        No picks yet
                       </div>
                     }
                   >
-                    <For each={filteredPlayers()}>
-                      {(player) => (
-                        <button
-                          onClick={() => setSelectedPlayer(player._id)}
-                          disabled={isMakingPick()}
-                          class={`w-full flex items-center justify-between p-4 rounded-lg border transition-all ${
-                            selectedPlayer() === player._id
-                              ? "bg-blue-600/20 border-blue-500"
-                              : "bg-slate-900/50 border-slate-600 hover:bg-slate-900/80"
-                          } ${
-                            isMakingPick()
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
-                        >
-                          <div class="flex items-center gap-4">
-                            <div
-                              class={`w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold ${
-                                player.avatar ? "hidden" : ""
-                              }`}
-                            >
-                              {player.name.charAt(0)}
-                            </div>
-                            <div class="text-left">
+                    <div class="space-y-3">
+                      <For each={recentPicks?.() || []}>
+                        {(pick) => (
+                          <div class="bg-slate-900/50 rounded-lg p-3 border border-slate-600">
+                            <div class="flex items-center justify-between mb-1">
                               <p class="text-white font-semibold">
-                                {player.name}
+                                {pick.player?.name || "Unknown"}
                               </p>
-                              <p class="text-slate-400 text-sm">
-                                {player.position}
-                              </p>
+                              <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                                #{pick.pickNumber}
+                              </span>
                             </div>
+                            <p class="text-slate-400 text-sm">
+                              {pick.player?.position} • {pick.teamName}
+                            </p>
                           </div>
-                          {selectedPlayer() === player._id && (
-                            <span class="text-blue-400">✓</span>
-                          )}
-                        </button>
-                      )}
-                    </For>
+                        )}
+                      </For>
+                    </div>
                   </Show>
                 </div>
 
-                {/* Make Pick Button */}
-                <button
-                  onClick={makePick}
-                  disabled={!selectedPlayer() || isMakingPick()}
-                  class="w-full mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg"
-                >
-                  {isMakingPick()
-                    ? "Making Pick..."
-                    : selectedPlayer()
-                    ? "Confirm Pick"
-                    : "Select a Player"}
-                </button>
-              </div>
-            </Show>
-
-            {/* Sidebar */}
-            <div class="space-y-6">
-              {/* Recent Picks */}
-              <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
-                <h3 class="text-xl font-bold text-white mb-4">Recent Picks</h3>
-                <Show
-                  when={recentPicks?.() && recentPicks()!.length > 0}
-                  fallback={
-                    <div class="text-center py-4 text-slate-400 text-sm">
-                      No picks yet
-                    </div>
-                  }
-                >
-                  <div class="space-y-3">
-                    <For each={recentPicks?.() || []}>
-                      {(pick) => (
-                        <div class="bg-slate-900/50 rounded-lg p-3 border border-slate-600">
-                          <div class="flex items-center justify-between mb-1">
-                            <p class="text-white font-semibold">
-                              {pick.player?.name || "Unknown"}
-                            </p>
-                            <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                              #{pick.pickNumber}
-                            </span>
-                          </div>
-                          <p class="text-slate-400 text-sm">
-                            {pick.player?.position} • {pick.teamName}
-                          </p>
+                {/* Quick Stats */}
+                <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
+                  <h3 class="text-xl font-bold text-white mb-4">Draft Stats</h3>
+                  <Show
+                    when={draftStats?.()}
+                    fallback={
+                      <div class="text-center py-4 text-slate-400 text-sm">
+                        Loading stats...
+                      </div>
+                    }
+                  >
+                    {(stats) => (
+                      <dl class="space-y-2">
+                        <div class="flex justify-between">
+                          <dt class="text-slate-400">Total Picks:</dt>
+                          <dd class="text-white font-semibold">
+                            {stats().totalPicks} / {stats().maxPicks}
+                          </dd>
                         </div>
-                      )}
-                    </For>
-                  </div>
+                        <div class="flex justify-between">
+                          <dt class="text-slate-400">Current Pick:</dt>
+                          <dd class="text-white font-semibold">
+                            #{stats().currentPick}
+                          </dd>
+                        </div>
+                        <div class="flex justify-between">
+                          <dt class="text-slate-400">Forwards:</dt>
+                          <dd class="text-white font-semibold">
+                            {stats().forwards}
+                          </dd>
+                        </div>
+                        <div class="flex justify-between">
+                          <dt class="text-slate-400">Defense:</dt>
+                          <dd class="text-white font-semibold">
+                            {stats().defense}
+                          </dd>
+                        </div>
+                        <div class="flex justify-between">
+                          <dt class="text-slate-400">Goalies:</dt>
+                          <dd class="text-white font-semibold">
+                            {stats().goalies}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
+                  </Show>
+                </div>
+
+                {/* Admin Actions (for host only) */}
+                <Show when={isHost() && (currentPickData?.()?.round ?? 0) >= 7}>
+                  <button
+                    onClick={handleFinishDraft}
+                    class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+                  >
+                    Finish Draft
+                  </button>
                 </Show>
               </div>
-
-              {/* Quick Stats */}
-              <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700 p-6">
-                <h3 class="text-xl font-bold text-white mb-4">Draft Stats</h3>
-                <Show
-                  when={draftStats?.()}
-                  fallback={
-                    <div class="text-center py-4 text-slate-400 text-sm">
-                      Loading stats...
-                    </div>
-                  }
-                >
-                  {(stats) => (
-                    <dl class="space-y-2">
-                      <div class="flex justify-between">
-                        <dt class="text-slate-400">Total Picks:</dt>
-                        <dd class="text-white font-semibold">
-                          {stats().totalPicks} / {stats().maxPicks}
-                        </dd>
-                      </div>
-                      <div class="flex justify-between">
-                        <dt class="text-slate-400">Current Pick:</dt>
-                        <dd class="text-white font-semibold">
-                          #{stats().currentPick}
-                        </dd>
-                      </div>
-                      <div class="flex justify-between">
-                        <dt class="text-slate-400">Forwards:</dt>
-                        <dd class="text-white font-semibold">
-                          {stats().forwards}
-                        </dd>
-                      </div>
-                      <div class="flex justify-between">
-                        <dt class="text-slate-400">Defense:</dt>
-                        <dd class="text-white font-semibold">
-                          {stats().defense}
-                        </dd>
-                      </div>
-                      <div class="flex justify-between">
-                        <dt class="text-slate-400">Goalies:</dt>
-                        <dd class="text-white font-semibold">
-                          {stats().goalies}
-                        </dd>
-                      </div>
-                    </dl>
-                  )}
-                </Show>
-              </div>
-
-              {/* Admin Actions (for host only) */}
-              <Show when={isHost() && (currentPickData?.()?.round ?? 0) >= 6}>
-                <button
-                  onClick={handleFinishDraft}
-                  class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  Finish Draft
-                </button>
-              </Show>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

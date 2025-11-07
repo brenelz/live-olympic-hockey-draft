@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouteContext } from "@tanstack/solid-router";
+import { Link, useNavigate } from "@tanstack/solid-router";
 import { authClient } from "~/lib/auth-client";
 import { Button } from "~/components/ui/button";
 import { createSignal, Show } from "solid-js";

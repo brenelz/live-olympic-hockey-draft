@@ -37,7 +37,7 @@ function RootComponent() {
         <Suspense>
           <ConvexProvider>
             <Outlet />
-            <TanStackRouterDevtools />
+            {import.meta.env.DEV && <TanStackRouterDevtools />}
           </ConvexProvider>
         </Suspense>
         <Scripts />

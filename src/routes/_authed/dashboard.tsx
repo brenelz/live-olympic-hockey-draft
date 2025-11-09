@@ -47,16 +47,17 @@ function Dashboard() {
                     />
                   </svg>
                 </div>
-                <Suspense>
-                  <div>
-                    <h2 class="text-3xl font-bold text-white">
-                      Welcome back, {user()?.name}!
-                    </h2>
-                    <p class="text-slate-300 mt-1">
-                      Ready to start your Olympic Hockey Draft?
-                    </p>
-                  </div>
-                </Suspense>
+                <div>
+                  <h2 class="text-3xl font-bold text-white">
+                    Welcome back,
+                    <Suspense>
+                      {" "}{user()?.name}!
+                    </Suspense>
+                  </h2>
+                  <p class="text-slate-300 mt-1">
+                    Ready to start your Olympic Hockey Draft?
+                  </p>
+                </div>
               </div>
             </div>
 

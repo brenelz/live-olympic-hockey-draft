@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authed")({
   beforeLoad: async (ctx) => {
     if (!ctx.context.token || !ctx.context.session) {
       // Preserve the current path as a redirect parameter
-      const currentPath = ctx.location.pathname + ctx.location.search;
+      const currentPath = ctx.location.pathname + ctx.location.searchStr;
       throw redirect({
         to: "/",
         search: { redirect: currentPath }

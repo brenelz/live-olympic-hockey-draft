@@ -2,9 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/solid-router";
 import { useMutation } from "convex-solidjs";
 import { api } from "convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
-import { createSignal, Show } from "solid-js";
+import { createSignal, Show, Suspense } from "solid-js";
 import { Header } from "~/components/header";
 import { fetchDraft } from "~/lib/server";
+import { createAsync } from "~/lib/utils";
 
 export const Route = createFileRoute("/_authed/draft/join")({
   component: JoinDraft,
@@ -17,11 +18,11 @@ export const Route = createFileRoute("/_authed/draft/join")({
   loader: async ({ deps }) => {
     const draftId = deps.id as Id<"drafts">;
     if (!draftId) {
-      return { draft: null };
+      return { draftPromise: Promise.resolve(null) };
     }
-    const draft = await fetchDraft({ data: { draftId } })
+    const draftPromise = fetchDraft({ data: { draftId } })
 
-    return { draft };
+    return { draftPromise };
   },
 });
 
@@ -29,6 +30,7 @@ function JoinDraft() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const loaderData = Route.useLoaderData();
+  const draft = createAsync(() => loaderData().draftPromise);
   const [error, setError] = createSignal("");
   const [draftIdInput, setDraftIdInput] = createSignal(search().id || "");
   const [teamName, setTeamName] = createSignal("");
@@ -77,60 +79,62 @@ function JoinDraft() {
               </p>
             </div>
 
-            {/* Draft ID Input - Always visible */}
-            <form onSubmit={handleJoinDraft} class={`mb-6 ${loaderData().draft && loaderData().draft!.status !== 'PRE' ? 'opacity-25 cursor-not-allowed' : ''}`}>
+            <Suspense fallback={<div class="text-slate-400 text-center">Loading...</div>}>
+              {/* Draft ID Input - Always visible */}
+              <form onSubmit={handleJoinDraft} class={`mb-6 ${draft() && draft()!.status !== 'PRE' ? 'opacity-25 cursor-not-allowed' : ''}`}>
 
-              <div class="bg-slate-900/50 rounded-lg p-6 border border-slate-600">
-                <label
-                  for="draft-id-input"
-                  class="block text-sm font-medium text-slate-200 mb-3"
-                >
-                  Team Name
-                </label>
+                <div class="bg-slate-900/50 rounded-lg p-6 border border-slate-600">
+                  <label
+                    for="draft-id-input"
+                    class="block text-sm font-medium text-slate-200 mb-3"
+                  >
+                    Team Name
+                  </label>
 
-                <input
-                  id="draft-id-input"
-                  type="text"
-                  value={teamName()}
-                  disabled={loaderData().draft && loaderData().draft!.status !== "PRE" ? true : false}
-                  onInput={(e) => setTeamName(e.currentTarget.value)}
-                  placeholder="Team Name"
-                  class="w-full flex-1 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-mono text-sm"
-                  required
-                />
-
-                <br /> <br />
-
-                <label
-                  for="draft-id-input"
-                  class="block text-sm font-medium text-slate-200 mb-3"
-                >
-                  Draft ID
-                </label>
-                <div class="flex gap-3">
                   <input
                     id="draft-id-input"
                     type="text"
-                    value={draftIdInput()}
-                    onInput={(e) => setDraftIdInput(e.currentTarget.value)}
-                    placeholder="Paste draft ID here..."
-                    class="flex-1 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-mono text-sm"
+                    value={teamName()}
+                    disabled={draft() && draft()!.status !== "PRE" ? true : false}
+                    onInput={(e) => setTeamName(e.currentTarget.value)}
+                    placeholder="Team Name"
+                    class="w-full flex-1 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-mono text-sm"
                     required
-                    disabled={loaderData().draft && loaderData().draft!.status !== "PRE" ? true : false}
                   />
-                  <button
-                    type="submit"
-                    class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-purple-500/30 whitespace-nowrap"
-                  >
-                    Join
-                  </button>
-                </div>
 
-                <p class="text-sm text-slate-400 mt-2">
-                  Get the draft ID from the person who created the draft
-                </p>
-              </div>
-            </form>
+                  <br /> <br />
+
+                  <label
+                    for="draft-id-input"
+                    class="block text-sm font-medium text-slate-200 mb-3"
+                  >
+                    Draft ID
+                  </label>
+                  <div class="flex gap-3">
+                    <input
+                      id="draft-id-input"
+                      type="text"
+                      value={draftIdInput()}
+                      onInput={(e) => setDraftIdInput(e.currentTarget.value)}
+                      placeholder="Paste draft ID here..."
+                      class="flex-1 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-mono text-sm"
+                      required
+                      disabled={draft() && draft()!.status !== "PRE" ? true : false}
+                    />
+                    <button
+                      type="submit"
+                      class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-purple-500/30 whitespace-nowrap"
+                    >
+                      Join
+                    </button>
+                  </div>
+
+                  <p class="text-sm text-slate-400 mt-2">
+                    Get the draft ID from the person who created the draft
+                  </p>
+                </div>
+              </form>
+            </Suspense>
 
             {/* Error Message */}
             <Show when={error()}>
@@ -142,25 +146,8 @@ function JoinDraft() {
           </div>
 
           {/* Warning Card */}
-          <Show when={!loaderData().draft || loaderData().draft!.status === "PRE"} fallback={<div class="mt-6 bg-amber-900/20 border border-amber-700/30 rounded-lg p-4">
-            <div class="flex gap-3">
-              <svg
-                class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <p class="text-amber-200 text-sm">
-                The draft has already started so it is too late to join.
-              </p>
-            </div>
-          </div>}>
-            <div class="mt-6 bg-amber-900/20 border border-amber-700/30 rounded-lg p-4">
+          <Suspense>
+            <Show when={!draft() || draft()!.status === "PRE"} fallback={<div class="mt-6 bg-amber-900/20 border border-amber-700/30 rounded-lg p-4">
               <div class="flex gap-3">
                 <svg
                   class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"
@@ -174,15 +161,34 @@ function JoinDraft() {
                   />
                 </svg>
                 <p class="text-amber-200 text-sm">
-                  Make sure you're available at the scheduled draft time. Missing
-                  your picks may result in auto-selection.
+                  The draft has already started so it is too late to join.
                 </p>
               </div>
-            </div>
-          </Show>
+            </div>}>
+              <div class="mt-6 bg-amber-900/20 border border-amber-700/30 rounded-lg p-4">
+                <div class="flex gap-3">
+                  <svg
+                    class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <p class="text-amber-200 text-sm">
+                    Make sure you're available at the scheduled draft time. Missing
+                    your picks may result in auto-selection.
+                  </p>
+                </div>
+              </div>
+            </Show>
+          </Suspense>
         </div>
-      </div >
-    </div >
+      </div>
+    </div>
   );
 }
 

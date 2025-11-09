@@ -4,18 +4,22 @@ import { Header } from "~/components/header";
 import { fetchUserDrafts } from "~/lib/server";
 import DraftStatusCards from "~/components/draft-status-cards";
 import YourDrafts from "~/components/your-drafts";
+import { createAsync } from "~/lib/utils";
+import { Show, Suspense } from "solid-js";
 
 export const Route = createFileRoute("/_authed/dashboard")({
   component: Dashboard,
   loader: async () => {
-    const drafts = await fetchUserDrafts();
-    return { drafts };
+    const draftsPromise = fetchUserDrafts();
+    return { draftsPromise };
   },
 });
 
 function Dashboard() {
   const context = Route.useRouteContext();
   const loaderData = Route.useLoaderData();
+  const drafts = createAsync(() => loaderData().draftsPromise);
+  const user = createAsync(() => context().userPromise);
 
   return (
     <div class="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-800">
@@ -43,7 +47,7 @@ function Dashboard() {
                 </div>
                 <div>
                   <h2 class="text-3xl font-bold text-white">
-                    Welcome back, {context().user.name}!
+                    Welcome back, {user()?.name}!
                   </h2>
                   <p class="text-slate-300 mt-1">
                     Ready to start your Olympic Hockey Draft?
@@ -51,9 +55,6 @@ function Dashboard() {
                 </div>
               </div>
             </div>
-
-            {/* Draft Status Cards */}
-            <DraftStatusCards drafts={loaderData().drafts} />
 
             {/* Quick Actions */}
             <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-2xl p-8 border border-slate-700">
@@ -100,8 +101,13 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Your Drafts */}
-            <YourDrafts drafts={loaderData().drafts} />
+            {/* Draft Status Cards */}
+            <Suspense fallback={<div class="text-slate-400">Loading...</div>}>
+              <Show when={drafts()}>
+                <DraftStatusCards drafts={drafts()!} />
+                <YourDrafts drafts={drafts()!} />
+              </Show>
+            </Suspense>
           </div>
         </div>
       </div>

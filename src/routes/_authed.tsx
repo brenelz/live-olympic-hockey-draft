@@ -8,8 +8,8 @@ export const Route = createFileRoute("/_authed")({
     </>
   ),
   beforeLoad: async (ctx) => {
-    const user = await fetchUser();
-    if (!ctx.context.token || !ctx.context.session || !user) {
+    const userPromise = fetchUser();
+    if (!ctx.context.token || !ctx.context.session) {
       // Preserve the current path as a redirect parameter
       const currentPath = ctx.location.pathname + ctx.location.search;
       throw redirect({
@@ -17,6 +17,6 @@ export const Route = createFileRoute("/_authed")({
         search: { redirect: currentPath }
       });
     }
-    return { user };
+    return { userPromise };
   },
 });

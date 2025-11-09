@@ -177,9 +177,6 @@ export const startDraft = mutation({
 
     // Check if countdown is over (start time has passed)
     const currentTime = Date.now();
-    if (draft.startDatetime > currentTime) {
-      throw new Error("Cannot start draft before the scheduled start time");
-    }
 
     // Get teams to determine total number
     const teams = await ctx.db

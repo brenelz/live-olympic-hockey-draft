@@ -3,7 +3,6 @@ import { useMutation } from "convex-solidjs";
 import { api } from "convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
 import { createSignal, Show } from "solid-js";
-import { formatTimeRemaining } from "~/lib/utils";
 import ErrorMessage from "../error-message";
 
 export type PreDraftActionsProps = {
@@ -33,12 +32,6 @@ export default function PreDraftActions(props: PreDraftActionsProps) {
   const handleStartDraft = async () => {
     if (!props.isHost) {
       setError("Only the host can start the draft");
-      return;
-    }
-
-    const remaining = props.timeRemaining;
-    if (remaining !== null && remaining > 0) {
-      setError("Cannot start draft before the scheduled start time");
       return;
     }
 
@@ -77,16 +70,13 @@ export default function PreDraftActions(props: PreDraftActionsProps) {
           <button
             onClick={handleStartDraft}
             disabled={
-              isStarting() ||
-              (props.timeRemaining !== null && props.timeRemaining > 0)
+              isStarting()
             }
             class="cursor-pointer flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-lg shadow-green-500/30"
           >
             {isStarting()
               ? "Starting..."
-              : props.timeRemaining !== null && props.timeRemaining > 0
-                ? `Start Draft (${formatTimeRemaining(props.timeRemaining)})`
-                : "Start Draft →"}
+              : "Start Draft →"}
           </button>
         </Show>
         <Show when={!props.isHost}>

@@ -21,7 +21,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       name: 'description',
       content: 'Tanstack Start Hackathon Project',
     }],
-    links: [{ rel: "stylesheet", href: styleCss }],
+    links: [
+      { rel: "preload", href: styleCss, as: "style" },
+      { rel: "stylesheet", href: styleCss }
+    ],
   }),
   beforeLoad: async ({ context }) => {
     const { session, token } = await context.queryClient.ensureQueryData(authQueryOptions);

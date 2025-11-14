@@ -20,6 +20,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     }, {
       name: 'description',
       content: 'Tanstack Start Hackathon Project',
+    }, {
+      name: 'viewport',
+      content: 'width=device-width, initial-scale=1.0',
     }],
     links: [
       { rel: "preload", href: styleCss, as: "style" },

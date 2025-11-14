@@ -38,6 +38,7 @@ export function SignUp(props: SignUpProps) {
 
             if (res.error) {
                 setError(res.error.message || "Unable to create account");
+                setIsLoading(false);
                 return;
             }
 
@@ -46,6 +47,7 @@ export function SignUp(props: SignUpProps) {
         } catch (err: any) {
             setError("Sign up failed. Please try again.");
             console.error("Sign up error:", err);
+            setIsLoading(false);
         }
     };
 

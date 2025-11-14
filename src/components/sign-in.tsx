@@ -36,6 +36,7 @@ export function SignIn(props: SignInProps) {
 
             if (res.error) {
                 setError("Invalid email or password");
+                setIsLoading(false);
                 return;
             }
 
@@ -44,6 +45,7 @@ export function SignIn(props: SignInProps) {
         } catch (err: any) {
             setError("Sign in failed. Please try again.");
             console.error("Sign in error:", err);
+            setIsLoading(false);
         }
     };
 
